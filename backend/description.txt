@@ -1,0 +1,2 @@
+backend can be any tech stack: java, python, go
+Each folder is a module for a specific business
