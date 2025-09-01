@@ -1,0 +1,12 @@
+// JetBrains
+.idea/
+
+// Env
+.env
+
+copilot-instructions.md
+
+plans/
+
+// Vscode
+.vscode/
