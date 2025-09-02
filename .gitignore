@@ -12,7 +12,7 @@ plans/
 .vscode/
 
 application.yml
-application-prod.
+application-prod.yml
 
 local.yaml
 production.yaml
