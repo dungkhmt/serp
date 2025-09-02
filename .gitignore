@@ -10,3 +10,9 @@ plans/
 
 // Vscode
 .vscode/
+
+application.yml
+application-prod.
+
+local.yaml
+production.yaml
