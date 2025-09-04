@@ -17,3 +17,5 @@ application-prod.yml
 default.yaml
 local.yaml
 production.yaml
+
+*.md
