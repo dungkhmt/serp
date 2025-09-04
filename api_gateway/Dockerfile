@@ -21,6 +21,6 @@ COPY --from=builder /app/main .
 
 COPY --from=builder /app/src/config ./config
 
-EXPOSE 8082
+EXPOSE 8080
 
 CMD ["./main"]

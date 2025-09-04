@@ -17,6 +17,8 @@ import lombok.NoArgsConstructor;
 public class LoginResponse {
     private String accessToken;
     private String refreshToken;
+    private Long expiresIn;
+    private Long refreshExpiresIn;
     @Builder.Default
     public String tokenType = "Bearer";
 }
