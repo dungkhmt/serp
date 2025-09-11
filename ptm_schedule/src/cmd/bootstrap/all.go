@@ -9,6 +9,8 @@ import (
 	"github.com/golibs-starter/golib"
 	golibdata "github.com/golibs-starter/golib-data"
 	golibgin "github.com/golibs-starter/golib-gin"
+	"github.com/serp/ptm-schedule/src/core/service"
+	"github.com/serp/ptm-schedule/src/core/usecase"
 	"github.com/serp/ptm-schedule/src/kernel/properties"
 	"github.com/serp/ptm-schedule/src/kernel/utils"
 	"github.com/serp/ptm-schedule/src/ui/middleware"
@@ -38,8 +40,15 @@ func All() fx.Option {
 		// Provide adapter
 
 		// Provide service
+		fx.Provide(service.NewTransactionService),
+		fx.Provide(service.NewSchedulePlanService),
+		fx.Provide(service.NewScheduleGroupService),
+		fx.Provide(service.NewScheduleTaskService),
 
 		// Provide usecase
+		fx.Provide(usecase.NewSchedulePlanUseCase),
+		fx.Provide(usecase.NewScheduleGroupUseCase),
+		fx.Provide(usecase.NewScheduleTaskUseCase),
 
 		// Provide controller
 
