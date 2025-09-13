@@ -13,6 +13,8 @@ import type {
   AuthResponse,
   TokenResponse,
   UserProfileResponse,
+  PermissionsResponse,
+  MenusResponse,
 } from '../types';
 
 export const authApi = api.injectEndpoints({
@@ -62,12 +64,6 @@ export const authApi = api.injectEndpoints({
       }),
       invalidatesTags: ['User'],
     }),
-
-    getCurrentUser: builder.query<UserProfileResponse, void>({
-      query: () => '/users/profile/me',
-      providesTags: ['User'],
-      transformResponse: createRtkTransformResponse(),
-    }),
   }),
   overrideExisting: false,
 });
@@ -78,6 +74,4 @@ export const {
   useGetTokenMutation,
   useRefreshTokenMutation,
   useRevokeTokenMutation,
-  useGetCurrentUserQuery,
-  useLazyGetCurrentUserQuery,
 } = authApi;
