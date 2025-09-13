@@ -10,6 +10,10 @@ export {
   useGetTokenMutation,
   useRefreshTokenMutation,
   useRevokeTokenMutation,
-  useGetCurrentUserQuery,
-  useLazyGetCurrentUserQuery,
 } from './authApi';
+
+export {
+  useGetCurrentUserQuery,
+  useGetUserPermissionsQuery,
+  useGetUserMenusQuery,
+} from './userApi';
