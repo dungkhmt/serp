@@ -69,9 +69,7 @@ public class SecurityConfiguration {
         httpSecurity.oauth2ResourceServer(oauth2 -> oauth2
                 .jwt(jwtConfigurer -> jwtConfigurer
                         .decoder(jwtDecoder())
-                        .jwtAuthenticationConverter(jwtAuthenticationConverter())
-                )
-        );
+                        .jwtAuthenticationConverter(jwtAuthenticationConverter())));
 
         httpSecurity.csrf(AbstractHttpConfigurer::disable);
 
@@ -95,7 +93,8 @@ public class SecurityConfiguration {
             Map<String, Object> realmAccess = jwt.getClaimAsMap(KeyCloakConstants.REALM_ACCESS);
             if (realmAccess != null && realmAccess.containsKey(KeyCloakConstants.ROLES_ATTRIBUTE)) {
                 Collection<String> realmRoles = (Collection<String>) realmAccess.get(KeyCloakConstants.ROLES_ATTRIBUTE);
-                realmRoles.forEach(role -> authorities.add(new SimpleGrantedAuthority(Constants.Security.ROLE_PREFIX + role)));
+                realmRoles.forEach(
+                        role -> authorities.add(new SimpleGrantedAuthority(Constants.Security.ROLE_PREFIX + role)));
             }
 
             Map<String, Object> resourceAccess = jwt.getClaimAsMap(KeyCloakConstants.RESOURCE_ACCESS);
@@ -104,8 +103,10 @@ public class SecurityConfiguration {
                     if (resource instanceof Map) {
                         Map<String, Object> resourceMap = (Map<String, Object>) resource;
                         if (resourceMap.containsKey(KeyCloakConstants.ROLES_ATTRIBUTE)) {
-                            Collection<String> resourceRoles = (Collection<String>) resourceMap.get(KeyCloakConstants.ROLES_ATTRIBUTE);
-                            resourceRoles.forEach(role -> authorities.add(new SimpleGrantedAuthority(Constants.Security.ROLE_PREFIX + role)));
+                            Collection<String> resourceRoles = (Collection<String>) resourceMap
+                                    .get(KeyCloakConstants.ROLES_ATTRIBUTE);
+                            resourceRoles.forEach(role -> authorities
+                                    .add(new SimpleGrantedAuthority(Constants.Security.ROLE_PREFIX + role)));
                         }
                     }
                 });
@@ -115,4 +116,4 @@ public class SecurityConfiguration {
         });
         return converter;
     }
-    }
+}
