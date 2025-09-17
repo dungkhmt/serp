@@ -17,6 +17,9 @@ jobs:
       account: ${{ steps.changes.outputs.account }}
       api-gateway: ${{ steps.changes.outputs.api-gateway }}
       ptm-task: ${{ steps.changes.outputs.ptm-task }}
+      ptm-schedule: ${{ steps.changes.outputs.ptm-schedule }}
+      ptm-optimization: ${{ steps.changes.outputs.ptm-optimization }}
+      serp-web: ${{ steps.changes.outputs.serp-web }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -31,6 +34,12 @@ jobs:
               - 'api_gateway/**'
             ptm-task:
               - 'ptm_task/**'
+            ptm-schedule:
+              - 'ptm_schedule/**'
+            ptm-optimization:
+              - 'ptm_optimization/**'
+            serp-web:
+              - 'serp_web/**'
 
   build-account:
     needs: changes
@@ -92,3 +101,81 @@ jobs:
           go mod download
           go test ./...
           go build -o main ./src
+
+  build-ptm-schedule:
+    needs: changes
+    if: ${{ needs.changes.outputs.ptm-schedule == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.25.0"
+
+      - name: Build PTM Schedule
+        run: |
+          cd ptm_schedule
+          go mod download
+          go test ./...
+          go build -o main ./src
+          
+  build-ptm-optimization:
+    needs: changes
+    if: ${{ needs.changes.outputs.ptm-optimization == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: "maven"
+
+      - name: Build PTM Optimization
+        run: |
+          cd ptm_optimization
+          chmod +x ./mvnw
+          ./mvnw clean package -DskipTests
+
+
+  build-serp-web:
+    needs: changes
+    if: ${{ needs.changes.outputs.serp-web == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: ./serp_web/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd serp_web
+          npm ci
+
+      - name: Run ESLint
+        run: |
+          cd serp_web
+          npm run lint
+
+      - name: Run type check
+        run: |
+          cd serp_web
+          npm run type-check
+
+      - name: Build Next.js app
+        run: |
+          cd serp_web
+          npm run build
+
