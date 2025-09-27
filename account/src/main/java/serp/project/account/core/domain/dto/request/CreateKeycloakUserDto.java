@@ -31,6 +31,8 @@ public class CreateKeycloakUserDto {
 
     private Long uid;
 
+    private Long orgId;
+
     @Builder.Default
     private boolean emailVerified = true;
 

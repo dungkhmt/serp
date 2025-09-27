@@ -89,7 +89,18 @@ export const api = createApi({
   baseQuery: baseQueryWithReauth,
 
   // Tag types for cache invalidation
-  tagTypes: ['account/user', 'account/auth'],
+  tagTypes: [
+    'account/user',
+    'account/profile',
+    'account/auth',
+    'account/permissions',
+    'account/menus',
+    'Customer',
+    'Lead',
+    'Opportunity',
+    'Activity',
+    'Analytics',
+  ],
 
   // Define endpoints in separate files for each module
   endpoints: () => ({}),

@@ -45,6 +45,8 @@ public class Constants {
 
         public static final String CLIENT_NOT_FOUND = "Client not found";
 
+        public static final String ORGANIZATION_ALREADY_EXISTS = "Organization already exists";
+
         public static final String PERMISSION_ALREADY_EXISTS = "Permission already exists";
         public static final String ONE_OR_MORE_PERMISSIONS_NOT_FOUND = "One or more permissions not found";
 
@@ -70,6 +72,8 @@ public class Constants {
         public static final String UPDATE_MENU_DISPLAY_FAILED = "Update menu display failed";
         public static final String DELETE_MENU_DISPLAY_FAILED = "Delete menu display failed";
         public static final String GET_MENU_DISPLAY_FAILED = "Get menu display failed";
+        public static final String ASSIGN_MENU_DISPLAY_FAILED = "Assign menu display failed";
+        public static final String UNASSIGN_MENU_DISPLAY_FAILED = "Unassign menu display failed";
     }
 
     @UtilityClass
