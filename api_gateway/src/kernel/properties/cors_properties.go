@@ -31,6 +31,7 @@ func NewDefaultCorsProperties() *CorsProperties {
 	return &CorsProperties{
 		AllowedOrigins: []string{
 			"http://localhost:3000",
+			"http://localhost:8080",
 			"https://serp-soict.vercel.app",
 		},
 		AllowedMethods: []string{
