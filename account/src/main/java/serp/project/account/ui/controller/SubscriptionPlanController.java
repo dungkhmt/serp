@@ -36,7 +36,7 @@ public class SubscriptionPlanController {
             return ResponseEntity.status(response.getCode()).body(response);
         }
 
-        log.info("POST /api/v1/subscription-plans - Creating plan: {}", request.getName());
+        log.info("POST /api/v1/subscription-plans - Creating plan");
         var response = subscriptionPlanUseCase.createPlan(request, createdBy);
         return ResponseEntity.status(response.getCode()).body(response);
     }

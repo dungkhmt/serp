@@ -14,6 +14,8 @@ import serp.project.account.core.domain.enums.BillingCycle;
 import serp.project.account.core.domain.enums.OrganizationStatus;
 import serp.project.account.core.domain.enums.OrganizationType;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "organizations")
 @NoArgsConstructor
@@ -47,18 +49,18 @@ public class OrganizationModel extends BaseModel {
     @Column(name = "employee_count")
     private Integer employeeCount;
 
-    @Column(name = "subscription_id", nullable = false)
+    @Column(name = "subscription_id")
     private Long subscriptionId;
 
     @Column(name = "subscription_expires_at")
-    private Long subscriptionExpiresAt;
+    private LocalDateTime subscriptionExpiresAt;
 
     @Column(name = "current_billing_cycle", length = 20)
     @Enumerated(EnumType.STRING)
     private BillingCycle currentBillingCycle;
 
     @Column(name = "next_billing_date")
-    private Long nextBillingDate;
+    private LocalDateTime nextBillingDate;
 
     @Column(name = "status")
     @Enumerated(EnumType.STRING)
