@@ -44,126 +44,126 @@ jobs:
             crm:
               - 'crm/**'
 
-  deploy-account:
-    needs: check-changes
-    if: ${{ needs.check-changes.outputs.account == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy Account Service
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT || 22 }}
-          script: |
-            cd ${{ secrets.DEPLOY_PATH }}/serp_account
-            docker compose pull
-            docker compose up -d --remove-orphans
-            docker image prune -f
+  # deploy-account:
+  #   needs: check-changes
+  #   if: ${{ needs.check-changes.outputs.account == 'true' }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Deploy Account Service
+  #       uses: appleboy/ssh-action@v1.0.0
+  #       with:
+  #         host: ${{ secrets.SSH_HOST }}
+  #         username: ${{ secrets.SSH_USERNAME }}
+  #         key: ${{ secrets.SSH_PRIVATE_KEY }}
+  #         port: ${{ secrets.SSH_PORT || 22 }}
+  #         script: |
+  #           cd ${{ secrets.DEPLOY_PATH }}/serp_account
+  #           docker compose pull
+  #           docker compose up -d --remove-orphans
+  #           docker image prune -f
 
-  deploy-api-gateway:
-    needs: check-changes
-    if: ${{ needs.check-changes.outputs.api-gateway == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy API Gateway
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT || 22 }}
-          script: |
-            cd ${{ secrets.DEPLOY_PATH }}/api_gateway
-            docker compose pull
-            docker compose up -d --remove-orphans
-            docker image prune -f
+  # deploy-api-gateway:
+  #   needs: check-changes
+  #   if: ${{ needs.check-changes.outputs.api-gateway == 'true' }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Deploy API Gateway
+  #       uses: appleboy/ssh-action@v1.0.0
+  #       with:
+  #         host: ${{ secrets.SSH_HOST }}
+  #         username: ${{ secrets.SSH_USERNAME }}
+  #         key: ${{ secrets.SSH_PRIVATE_KEY }}
+  #         port: ${{ secrets.SSH_PORT || 22 }}
+  #         script: |
+  #           cd ${{ secrets.DEPLOY_PATH }}/api_gateway
+  #           docker compose pull
+  #           docker compose up -d --remove-orphans
+  #           docker image prune -f
 
-  deploy-ptm-task:
-    needs: check-changes
-    if: ${{ needs.check-changes.outputs.ptm-task == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy PTM Task
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT || 22 }}
-          script: |
-            cd ${{ secrets.DEPLOY_PATH }}/ptm_task
-            docker compose pull
-            docker compose up -d --remove-orphans
-            docker image prune -f
+  # deploy-ptm-task:
+  #   needs: check-changes
+  #   if: ${{ needs.check-changes.outputs.ptm-task == 'true' }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Deploy PTM Task
+  #       uses: appleboy/ssh-action@v1.0.0
+  #       with:
+  #         host: ${{ secrets.SSH_HOST }}
+  #         username: ${{ secrets.SSH_USERNAME }}
+  #         key: ${{ secrets.SSH_PRIVATE_KEY }}
+  #         port: ${{ secrets.SSH_PORT || 22 }}
+  #         script: |
+  #           cd ${{ secrets.DEPLOY_PATH }}/ptm_task
+  #           docker compose pull
+  #           docker compose up -d --remove-orphans
+  #           docker image prune -f
 
-  deploy-ptm-schedule:
-    needs: check-changes
-    if: ${{ needs.check-changes.outputs.ptm-schedule == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy PTM Schedule
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT || 22 }}
-          script: |
-            cd ${{ secrets.DEPLOY_PATH }}/ptm_schedule
-            docker compose pull
-            docker compose up -d --remove-orphans
-            docker image prune -f
+  # deploy-ptm-schedule:
+  #   needs: check-changes
+  #   if: ${{ needs.check-changes.outputs.ptm-schedule == 'true' }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Deploy PTM Schedule
+  #       uses: appleboy/ssh-action@v1.0.0
+  #       with:
+  #         host: ${{ secrets.SSH_HOST }}
+  #         username: ${{ secrets.SSH_USERNAME }}
+  #         key: ${{ secrets.SSH_PRIVATE_KEY }}
+  #         port: ${{ secrets.SSH_PORT || 22 }}
+  #         script: |
+  #           cd ${{ secrets.DEPLOY_PATH }}/ptm_schedule
+  #           docker compose pull
+  #           docker compose up -d --remove-orphans
+  #           docker image prune -f
 
-  deploy-ptm-optimization:
-    needs: check-changes
-    if: ${{ needs.check-changes.outputs.ptm-optimization == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy PTM Optimization
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT || 22 }}
-          script: |
-            cd ${{ secrets.DEPLOY_PATH }}/ptm_optimization
-            docker compose pull
-            docker compose up -d --remove-orphans
-            docker image prune -f
+  # deploy-ptm-optimization:
+  #   needs: check-changes
+  #   if: ${{ needs.check-changes.outputs.ptm-optimization == 'true' }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Deploy PTM Optimization
+  #       uses: appleboy/ssh-action@v1.0.0
+  #       with:
+  #         host: ${{ secrets.SSH_HOST }}
+  #         username: ${{ secrets.SSH_USERNAME }}
+  #         key: ${{ secrets.SSH_PRIVATE_KEY }}
+  #         port: ${{ secrets.SSH_PORT || 22 }}
+  #         script: |
+  #           cd ${{ secrets.DEPLOY_PATH }}/ptm_optimization
+  #           docker compose pull
+  #           docker compose up -d --remove-orphans
+  #           docker image prune -f
 
-  deploy-crm:
-    needs: check-changes
-    if: ${{ needs.check-changes.outputs.crm == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy CRM Service
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT || 22 }}
-          script: |
-            cd ${{ secrets.DEPLOY_PATH }}/crm
-            docker compose pull
-            docker compose up -d --remove-orphans
-            docker image prune -f
+  # deploy-crm:
+  #   needs: check-changes
+  #   if: ${{ needs.check-changes.outputs.crm == 'true' }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Deploy CRM Service
+  #       uses: appleboy/ssh-action@v1.0.0
+  #       with:
+  #         host: ${{ secrets.SSH_HOST }}
+  #         username: ${{ secrets.SSH_USERNAME }}
+  #         key: ${{ secrets.SSH_PRIVATE_KEY }}
+  #         port: ${{ secrets.SSH_PORT || 22 }}
+  #         script: |
+  #           cd ${{ secrets.DEPLOY_PATH }}/crm
+  #           docker compose pull
+  #           docker compose up -d --remove-orphans
+  #           docker image prune -f
 
-  notify-deployment:
-    needs: check-changes
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deployment Summary
-        run: |
-          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
-          echo "Deployment completed for changed services" >> $GITHUB_STEP_SUMMARY
-          echo "- Account: ${{ needs.check-changes.outputs.account }}" >> $GITHUB_STEP_SUMMARY
-          echo "- API Gateway: ${{ needs.check-changes.outputs.api-gateway }}" >> $GITHUB_STEP_SUMMARY
-          echo "- PTM Task: ${{ needs.check-changes.outputs.ptm-task }}" >> $GITHUB_STEP_SUMMARY
-          echo "- PTM Schedule: ${{ needs.check-changes.outputs.ptm-schedule }}" >> $GITHUB_STEP_SUMMARY
-          echo "- PTM Optimization: ${{ needs.check-changes.outputs.ptm-optimization }}" >> $GITHUB_STEP_SUMMARY
-          echo "- CRM: ${{ needs.check-changes.outputs.crm }}" >> $GITHUB_STEP_SUMMARY
+  # notify-deployment:
+  #   needs: check-changes
+  #   if: always()
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Deployment Summary
+  #       run: |
+  #         echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+  #         echo "Deployment completed for changed services" >> $GITHUB_STEP_SUMMARY
+  #         echo "- Account: ${{ needs.check-changes.outputs.account }}" >> $GITHUB_STEP_SUMMARY
+  #         echo "- API Gateway: ${{ needs.check-changes.outputs.api-gateway }}" >> $GITHUB_STEP_SUMMARY
+  #         echo "- PTM Task: ${{ needs.check-changes.outputs.ptm-task }}" >> $GITHUB_STEP_SUMMARY
+  #         echo "- PTM Schedule: ${{ needs.check-changes.outputs.ptm-schedule }}" >> $GITHUB_STEP_SUMMARY
+  #         echo "- PTM Optimization: ${{ needs.check-changes.outputs.ptm-optimization }}" >> $GITHUB_STEP_SUMMARY
+  #         echo "- CRM: ${{ needs.check-changes.outputs.crm }}" >> $GITHUB_STEP_SUMMARY
