@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/golibs-starter/golib/log"
+	request "github.com/serp/api-gateway/src/core/domain/dto/request/account"
 	"github.com/serp/api-gateway/src/core/domain/dto/response"
 	port "github.com/serp/api-gateway/src/core/port/client/account"
 	"github.com/serp/api-gateway/src/kernel/properties"
@@ -21,24 +22,24 @@ type OrganizationClientAdapter struct {
 	circuitBreaker *utils.CircuitBreaker
 }
 
-func (o *OrganizationClientAdapter) GetOrganizations(ctx context.Context, search *string, status *string, organizationType *string, page *int, pageSize *int) (*response.BaseResponse, error) {
+func (o *OrganizationClientAdapter) GetOrganizations(ctx context.Context, params *request.GetOrganizationParams) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 
 	queryParams := make(map[string]string)
-	if search != nil {
-		queryParams["search"] = *search
+	if params.Search != nil {
+		queryParams["search"] = *params.Search
 	}
-	if status != nil {
-		queryParams["status"] = *status
+	if params.Status != nil {
+		queryParams["status"] = *params.Status
 	}
-	if organizationType != nil {
-		queryParams["type"] = *organizationType
+	if params.OrganizationType != nil {
+		queryParams["type"] = *params.OrganizationType
 	}
-	if page != nil {
-		queryParams["page"] = fmt.Sprintf("%d", *page)
+	if params.Page != nil {
+		queryParams["page"] = fmt.Sprintf("%d", *params.Page)
 	}
-	if pageSize != nil {
-		queryParams["pageSize"] = fmt.Sprintf("%d", *pageSize)
+	if params.PageSize != nil {
+		queryParams["pageSize"] = fmt.Sprintf("%d", *params.PageSize)
 	}
 
 	var httpResponse *utils.HTTPResponse
@@ -114,6 +115,34 @@ func (o *OrganizationClientAdapter) GetMyOrganization(ctx context.Context) (*res
 	var result response.BaseResponse
 	if err := o.apiClient.UnmarshalResponse(ctx, httpResponse, &result); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal get my organization response: %w", err)
+	}
+	return &result, nil
+}
+
+func (o *OrganizationClientAdapter) CreateUserForOrganization(ctx context.Context, organizationID int64, req *request.CreateUserForOrgRequest) (*response.BaseResponse, error) {
+	headers := utils.BuildHeadersFromContext(ctx)
+
+	path := fmt.Sprintf("/api/v1/organizations/%d/users", organizationID)
+
+	var httpResponse *utils.HTTPResponse
+	err := o.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
+		var err error
+		httpResponse, err = o.apiClient.POST(ctx, path, req, headers)
+		if err != nil {
+			return fmt.Errorf("failed to call create user for organization API: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if !o.apiClient.IsSuccessStatusCode(httpResponse.StatusCode) {
+		log.Error(ctx, fmt.Sprintf("CreateUserForOrganization API returned error status: %d", httpResponse.StatusCode))
+	}
+
+	var result response.BaseResponse
+	if err := o.apiClient.UnmarshalResponse(ctx, httpResponse, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal create user for organization response: %w", err)
 	}
 	return &result, nil
 }
