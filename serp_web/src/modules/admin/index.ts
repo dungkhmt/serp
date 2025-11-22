@@ -11,6 +11,12 @@ export { AdminHeader } from './components/layout/AdminHeader';
 // Auth Guard
 export { AdminAuthGuard, withAdminAuth } from './components/AdminAuthGuard';
 
+// Contexts
+export {
+  AdminSidebarProvider,
+  useAdminSidebar,
+} from './contexts/AdminSidebarContext';
+
 // Shared Components
 export { AdminStatsCard } from './components/shared/AdminStatsCard';
 export type { AdminStatsCardProps } from './components/shared/AdminStatsCard';
@@ -24,6 +30,30 @@ export type {
   AdminActionMenuItem,
 } from './components/shared/AdminActionMenu';
 
+// Role Components
+export { RoleForm, RoleFormDialog } from './components/roles';
+
+// Menu Display Components
+export {
+  IconPicker,
+  MenuDisplayTree,
+  MenuDisplayFormDialog,
+} from './components/menu-displays';
+
+// Hooks
+export { usePlans } from './hooks/usePlans';
+export type { UsePlansReturn } from './hooks/usePlans';
+export { useModules } from './hooks/useModules';
+export type { UseModulesReturn } from './hooks/useModules';
+export { useOrganizations } from './hooks/useOrganizations';
+export type { UseOrganizationsReturn } from './hooks/useOrganizations';
+export { useRoles } from './hooks/useRoles';
+export type { UseRolesReturn } from './hooks/useRoles';
+export { useSubscriptions } from './hooks/useSubscriptions';
+export type { UseSubscriptionsReturn } from './hooks/useSubscriptions';
+export { useUsers } from './hooks/useUsers';
+export { useMenuDisplays } from './hooks/useMenuDisplays';
+
 // Types
 export type {
   Organization,
@@ -31,15 +61,32 @@ export type {
   SubscriptionPlan,
   Module,
   UserProfile,
+  Role,
+  Permission,
+  CreateRoleRequest,
+  UpdateRoleRequest,
   OrganizationFilters,
   SubscriptionFilters,
   ModuleFilters,
   UserFilters,
+  RoleFilters,
   OrganizationStatus,
   SubscriptionStatus,
   BillingCycle,
   ModuleStatus,
   UserStatus,
+  RoleScope,
+  RoleType,
+  MenuType,
+  MenuRoleInfo,
+  MenuDisplayDetail,
+  MenuDisplayTreeNode,
+  CreateMenuDisplayRequest,
+  UpdateMenuDisplayRequest,
+  AssignMenuDisplayToRoleRequest,
+  GetMenuDisplayParams,
+  MenuDisplayFilters,
+  MenuDisplayStats,
 } from './types';
 
 // API Services
@@ -62,6 +109,9 @@ export {
   useGetSubscriptionByIdQuery,
   useLazyGetSubscriptionsQuery,
   useLazyGetSubscriptionByIdQuery,
+  useActivateSubscriptionMutation,
+  useRejectSubscriptionMutation,
+  useExpireSubscriptionMutation,
 
   // Subscription Plans
   plansApi,
@@ -77,4 +127,27 @@ export {
   useGetModuleByIdQuery,
   useCreateModuleMutation,
   useUpdateModuleMutation,
+
+  // Roles
+  rolesApi,
+  useGetAllRolesQuery,
+  useGetRoleByIdQuery,
+  useCreateRoleMutation,
+  useUpdateRoleMutation,
+  useAddPermissionsToRoleMutation,
+  useDeleteRoleMutation,
+
+  // Menu Displays
+  menuDisplaysApi,
+  useGetAllMenuDisplaysQuery,
+  useGetMenuDisplaysByModuleQuery,
+  useGetMenuDisplaysByRoleIdsQuery,
+  useCreateMenuDisplayMutation,
+  useUpdateMenuDisplayMutation,
+  useDeleteMenuDisplayMutation,
+  useAssignMenuDisplaysToRoleMutation,
+  useUnassignMenuDisplaysFromRoleMutation,
 } from './services/adminApi';
+
+// Users UI Components
+export { UserDialog } from './components/users/UserDialog';

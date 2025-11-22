@@ -8,6 +8,7 @@ package serp.project.account.core.usecase;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -17,13 +18,19 @@ import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
 import serp.project.account.core.domain.dto.request.AssignUserToModuleRequest;
 import serp.project.account.core.domain.dto.request.BulkAssignUsersRequest;
+import serp.project.account.core.domain.dto.response.OrgModuleAccessResponse;
+import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.domain.entity.UserModuleAccessEntity;
 import serp.project.account.core.exception.AppException;
+import serp.project.account.core.service.ICombineRoleService;
 import serp.project.account.core.service.IModuleService;
-import serp.project.account.core.service.IOrganizationSubscriptionService;
+import serp.project.account.core.service.IOrganizationService;
+import serp.project.account.core.service.ISubscriptionService;
+import serp.project.account.core.service.IRoleService;
 import serp.project.account.core.service.ISubscriptionPlanService;
 import serp.project.account.core.service.IUserModuleAccessService;
 import serp.project.account.core.service.IUserService;
+import serp.project.account.kernel.utils.CollectionUtils;
 import serp.project.account.kernel.utils.ResponseUtils;
 
 @Service
@@ -31,11 +38,14 @@ import serp.project.account.kernel.utils.ResponseUtils;
 @Slf4j
 public class ModuleAccessUseCase {
 
-    private final IOrganizationSubscriptionService organizationSubscriptionService;
+    private final ISubscriptionService subscriptionService;
     private final ISubscriptionPlanService subscriptionPlanService;
     private final IUserModuleAccessService userModuleAccessService;
     private final IUserService userService;
     private final IModuleService moduleService;
+    private final IRoleService roleService;
+    private final ICombineRoleService combineRoleService;
+    private final IOrganizationService organizationService;
 
     private final ResponseUtils responseUtils;
 
@@ -43,12 +53,7 @@ public class ModuleAccessUseCase {
         try {
             log.info("[UseCase] Checking if organization {} can access module {}", organizationId, moduleId);
 
-            if (!organizationSubscriptionService.hasActiveSubscription(organizationId)) {
-                log.warn("Organization {} does not have active subscription", organizationId);
-                return responseUtils.success(false);
-            }
-
-            var subscription = organizationSubscriptionService.getActiveSubscription(organizationId);
+            var subscription = subscriptionService.getActiveOrPendingUpgrade(organizationId);
             var plan = subscriptionPlanService.getPlanById(subscription.getSubscriptionPlanId());
 
             var planModules = subscriptionPlanService.getPlanModules(plan.getId());
@@ -72,22 +77,53 @@ public class ModuleAccessUseCase {
         try {
             log.info("[UseCase] Getting accessible modules for organization {}", organizationId);
 
-            if (!organizationSubscriptionService.hasActiveSubscription(organizationId)) {
-                log.warn("Organization {} does not have active subscription", organizationId);
-                return responseUtils.success(Collections.emptyList());
-            }
-
-            var subscription = organizationSubscriptionService.getActiveSubscription(organizationId);
+            var organization = organizationService.getOrganizationById(organizationId);
+            var subscription = subscriptionService.getActiveOrPendingUpgrade(organizationId);
             var plan = subscriptionPlanService.getPlanById(subscription.getSubscriptionPlanId());
-
             var planModules = subscriptionPlanService.getPlanModules(plan.getId());
             var moduleIds = planModules.stream()
                     .filter(pm -> pm.getIsIncluded())
                     .map(pm -> pm.getModuleId())
                     .toList();
+            var allRoles = roleService.getAllRoles();
+            var allModules = moduleService.getAllModules();
+
+            int totalUsers = organization.getEmployeeCount() != null ? organization.getEmployeeCount()
+                    : userService.countUsersByOrganizationId(organizationId);
+
+            List<OrgModuleAccessResponse> result = new ArrayList<>();
+            result.addAll(allModules.stream()
+                    .filter(m -> moduleIds.contains(m.getId()))
+                    .map(m -> OrgModuleAccessResponse.builder()
+                            .organizationId(organizationId)
+                            .moduleId(m.getId())
+                            .moduleName(m.getModuleName())
+                            .moduleCode(m.getCode())
+                            .moduleDescription(m.getDescription())
+                            .isActive(true)
+                            .grantedAt(subscription.getActivatedAt())
+                            .activeUserCount(userModuleAccessService.countActiveUsers(m.getId(), organizationId))
+                            .totalUsersCount(totalUsers)
+                            .requiredRoles(allRoles.stream()
+                                    .filter(r -> r.getModuleId() != null && r.getModuleId().equals(m.getId()))
+                                    .map(RoleEntity::getName)
+                                    .toList())
+                            .build())
+                    .toList());
+            result.addAll(allModules.stream()
+                    .filter(m -> !moduleIds.contains(m.getId()))
+                    .map(m -> OrgModuleAccessResponse.builder()
+                            .organizationId(organizationId)
+                            .moduleId(m.getId())
+                            .moduleName(m.getModuleName())
+                            .moduleCode(m.getCode())
+                            .moduleDescription(m.getDescription())
+                            .isActive(false)
+                            .build())
+                    .toList());
 
             log.info("Organization {} has access to {} modules", organizationId, moduleIds.size());
-            return responseUtils.success(moduleIds);
+            return responseUtils.success(result);
         } catch (AppException e) {
             log.error("Error getting accessible modules for organization {}: {}", organizationId, e.getMessage());
             return responseUtils.error(e.getCode(), e.getMessage());
@@ -104,8 +140,15 @@ public class ModuleAccessUseCase {
         try {
             log.info("[UseCase] Assigning user {} to module {} in organization {}",
                     request.getUserId(), request.getModuleId(), organizationId);
-
-            var subscription = organizationSubscriptionService.getActiveSubscription(organizationId);
+            var user = userService.getUserById(request.getUserId());
+            if (user == null) {
+                throw new AppException(Constants.ErrorMessage.USER_NOT_FOUND);
+            }
+            var module = moduleService.getModuleByIdFromCache(request.getModuleId());
+            if (module == null) {
+                throw new AppException(Constants.ErrorMessage.MODULE_NOT_FOUND);
+            }
+            var subscription = subscriptionService.getActiveOrPendingUpgrade(organizationId);
             var planModules = subscriptionPlanService.getPlanModules(subscription.getSubscriptionPlanId());
 
             var planModule = planModules.stream()
@@ -126,6 +169,24 @@ public class ModuleAccessUseCase {
                     organizationId,
                     assignedBy,
                     subscription.getEndDate());
+            List<RoleEntity> moduleRoles = roleService.getRolesByModuleId(request.getModuleId());
+            List<RoleEntity> assignedRoles = Collections.emptyList();
+            if (request.getRoleId() != null) {
+                assignedRoles = moduleRoles.stream()
+                        .filter(role -> role.getId().equals(request.getRoleId()))
+                        .toList();
+            }
+            if (assignedRoles.isEmpty()) {
+                assignedRoles = moduleRoles.stream()
+                        .filter(RoleEntity::isAutoAssigned)
+                        .toList();
+            }
+            if (assignedRoles.isEmpty()) {
+                log.error("No roles found to assign to user {} for module {}", request.getUserId(),
+                        request.getModuleId());
+                throw new AppException(Constants.ErrorMessage.NO_ROLES_FOUND_FOR_MODULE);
+            }
+            combineRoleService.assignRolesToUser(user, assignedRoles);
 
             // Implement later: Send notification
 
@@ -147,7 +208,7 @@ public class ModuleAccessUseCase {
             log.info("[UseCase] Bulk assigning {} users to module {} in organization {}",
                     request.getUserIds().size(), request.getModuleId(), request.getOrganizationId());
 
-            var subscription = organizationSubscriptionService.getActiveSubscription(request.getOrganizationId());
+            var subscription = subscriptionService.getActiveOrPendingUpgrade(request.getOrganizationId());
             var planModules = subscriptionPlanService.getPlanModules(subscription.getSubscriptionPlanId());
 
             var planModule = planModules.stream()
@@ -171,6 +232,16 @@ public class ModuleAccessUseCase {
                     request.getOrganizationId(),
                     assignedBy);
 
+            List<RoleEntity> moduleRoles = roleService.getRolesByModuleId(request.getModuleId()).stream()
+                    .filter(RoleEntity::isAutoAssigned)
+                    .toList();
+            for (Long userId : request.getUserIds()) {
+                var user = userService.getUserById(userId);
+                if (user != null) {
+                    combineRoleService.assignRolesToUser(user, moduleRoles);
+                }
+            }
+
             // Implement later: Send notification
 
             log.info("[UseCase] Successfully bulk assigned {} users to module {}",
@@ -192,6 +263,12 @@ public class ModuleAccessUseCase {
                     userId, moduleId, organizationId);
 
             userModuleAccessService.revokeUserModuleAccess(userId, moduleId, organizationId);
+
+            List<RoleEntity> moduleRoles = roleService.getRolesByModuleId(moduleId);
+            var user = userService.getUserById(userId);
+            if (user != null && !CollectionUtils.isEmpty(moduleRoles)) {
+                combineRoleService.removeRolesFromUser(user, moduleRoles);
+            }
 
             // Implement later: Send notification
 
@@ -255,7 +332,7 @@ public class ModuleAccessUseCase {
         try {
             log.info("[UseCase] Revoking module access for subscription {}", subscriptionId);
 
-            var subscription = organizationSubscriptionService.getSubscriptionById(subscriptionId);
+            var subscription = subscriptionService.getSubscriptionById(subscriptionId);
             var plan = subscriptionPlanService.getPlanById(subscription.getSubscriptionPlanId());
 
             var planModules = subscriptionPlanService.getPlanModules(plan.getId());

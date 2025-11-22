@@ -2,13 +2,14 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   Button,
   Avatar,
   AvatarFallback,
+  AvatarImage,
   ThemeToggle,
   Input,
 } from '@/shared/components';
@@ -22,15 +23,23 @@ import {
   Home,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
+import { useUser } from '@/modules/account';
 
 interface CRMHeaderProps {
   className?: string;
+  scrollContainerRef?: React.RefObject<HTMLElement | null>;
 }
 
-export const CRMHeader: React.FC<CRMHeaderProps> = ({ className }) => {
+export const CRMHeader: React.FC<CRMHeaderProps> = ({
+  className,
+  scrollContainerRef,
+}) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [notifications, setNotifications] = useState(3);
+  const [hidden, setHidden] = useState(false);
+
+  const { getInitials, getDisplayName, user } = useUser();
 
   const router = useRouter();
   const pathname = usePathname();
@@ -80,26 +89,56 @@ export const CRMHeader: React.FC<CRMHeaderProps> = ({ className }) => {
     router.push('/auth');
   };
 
+  useEffect(() => {
+    const container = scrollContainerRef?.current ?? null;
+    let last = container
+      ? container.scrollTop
+      : typeof window !== 'undefined'
+        ? window.scrollY
+        : 0;
+    let ticking = false;
+    const threshold = 8;
+
+    const onScroll = () => {
+      const current = container ? container.scrollTop : window.scrollY;
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          if (current <= 0) {
+            setHidden(false);
+          } else if (current > last + threshold) {
+            setHidden(true);
+          } else if (current < last - threshold) {
+            setHidden(false);
+          }
+          last = current;
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    const el: HTMLElement | Window = container ?? window;
+    el.addEventListener('scroll', onScroll, {
+      passive: true,
+    } as EventListenerOptions);
+
+    return () => {
+      el.removeEventListener('scroll', onScroll as EventListener);
+    };
+  }, [scrollContainerRef]);
+
   return (
     <header
       className={cn(
-        'sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60',
+        'sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-transform duration-200',
+        hidden ? '-translate-y-16' : 'translate-y-0',
         className
       )}
+      aria-hidden={hidden}
     >
       <div className='flex h-16 items-center justify-between px-6'>
-        {/* Left Section - Branding & Breadcrumbs */}
+        {/* Left Section - Breadcrumbs */}
         <div className='flex items-center space-x-4'>
-          {/* CRM Logo */}
-          <Link href='/crm' className='flex items-center space-x-2'>
-            <div className='h-8 w-8 bg-primary rounded-md flex items-center justify-center'>
-              <span className='text-primary-foreground font-bold text-sm'>
-                C
-              </span>
-            </div>
-            <span className='font-bold text-lg hidden sm:block'>CRM</span>
-          </Link>
-
           {/* Breadcrumbs */}
           <nav className='hidden md:flex items-center space-x-2 text-sm'>
             {getBreadcrumbs().map((breadcrumb, index) => (
@@ -167,11 +206,14 @@ export const CRMHeader: React.FC<CRMHeaderProps> = ({ className }) => {
               className='flex items-center gap-2 rounded-lg p-2 hover:bg-muted transition-colors'
             >
               <Avatar className='h-8 w-8'>
-                <AvatarFallback>SM</AvatarFallback>
+                {user?.avatarUrl && (
+                  <AvatarImage src={user.avatarUrl} alt={getDisplayName()} />
+                )}
+                <AvatarFallback>{getInitials()}</AvatarFallback>
               </Avatar>
               <div className='hidden sm:block text-left'>
-                <p className='text-sm font-medium'>Sales Manager</p>
-                <p className='text-xs text-muted-foreground'>admin@crm.com</p>
+                <p className='text-sm font-medium'>{getDisplayName()}</p>
+                <p className='text-xs text-muted-foreground'>{user?.email}</p>
               </div>
               <ChevronDown className='h-4 w-4 text-muted-foreground' />
             </button>
@@ -180,13 +222,6 @@ export const CRMHeader: React.FC<CRMHeaderProps> = ({ className }) => {
             {showUserMenu && (
               <div className='absolute right-0 top-full mt-2 w-56 bg-background border rounded-md shadow-lg z-50'>
                 <div className='p-2'>
-                  <div className='px-2 py-2 border-b'>
-                    <p className='font-medium'>Sales Manager</p>
-                    <p className='text-xs text-muted-foreground'>
-                      admin@crm.com
-                    </p>
-                  </div>
-
                   <div className='py-2'>
                     <Button
                       variant='ghost'

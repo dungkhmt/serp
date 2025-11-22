@@ -61,11 +61,17 @@ public class SubscriptionPlanModuleAdapter implements ISubscriptionPlanModulePor
 
     @Override
     public void deleteByPlanIdAndModuleId(Long planId, Long moduleId) {
-        subscriptionPlanModuleRepository.deleteByPlanIdAndModuleId(planId, moduleId);
+        subscriptionPlanModuleRepository.deleteBySubscriptionPlanIdAndModuleId(planId, moduleId);
     }
 
     @Override
     public boolean existsByPlanIdAndModuleId(Long planId, Long moduleId) {
         return subscriptionPlanModuleRepository.existsByPlanIdAndModuleId(planId, moduleId);
+    }
+
+    @Override
+    public void saveAll(List<SubscriptionPlanModuleEntity> planModules) {
+        var models = subscriptionPlanModuleMapper.toModelList(planModules);
+        subscriptionPlanModuleRepository.saveAll(models);
     }
 }

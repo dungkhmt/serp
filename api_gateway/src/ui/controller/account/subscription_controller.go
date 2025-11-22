@@ -17,6 +17,25 @@ type SubscriptionController struct {
 	subscriptionService service.ISubscriptionService
 }
 
+func (s *SubscriptionController) GetAllSubscriptions(c *gin.Context) {
+	params := request.GetSubscriptionParams{
+		Page:           utils.ParseIntQuery(c, "page"),
+		PageSize:       utils.ParseIntQuery(c, "pageSize"),
+		SortBy:         utils.ParseStringQuery(c, "sortBy"),
+		SortDir:        utils.ParseStringQuery(c, "sortDir"),
+		OrganizationID: utils.ParseInt64Query(c, "organizationId"),
+		Status:         utils.ParseStringQuery(c, "status"),
+		BillingCycle:   utils.ParseStringQuery(c, "billingCycle"),
+	}
+
+	res, err := s.subscriptionService.GetAllSubscriptions(c.Request.Context(), &params)
+	if err != nil {
+		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
+		return
+	}
+	c.JSON(res.Code, res)
+}
+
 func (s *SubscriptionController) Subscribe(c *gin.Context) {
 	var req request.SubscribeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -25,6 +44,36 @@ func (s *SubscriptionController) Subscribe(c *gin.Context) {
 	}
 
 	res, err := s.subscriptionService.Subscribe(c.Request.Context(), &req)
+	if err != nil {
+		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
+		return
+	}
+	c.JSON(res.Code, res)
+}
+
+func (s *SubscriptionController) SubscribeCustomPlan(c *gin.Context) {
+	var req request.SubscribeCustomPlanRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+		return
+	}
+
+	res, err := s.subscriptionService.SubscribeCustomPlan(c.Request.Context(), &req)
+	if err != nil {
+		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
+		return
+	}
+	c.JSON(res.Code, res)
+}
+
+func (s *SubscriptionController) RequestMoreModules(c *gin.Context) {
+	var req request.RequestMoreModulesRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+		return
+	}
+
+	res, err := s.subscriptionService.RequestMoreModules(c.Request.Context(), &req)
 	if err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
 		return

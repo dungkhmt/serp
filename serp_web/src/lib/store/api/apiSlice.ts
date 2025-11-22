@@ -90,11 +90,13 @@ export const api = createApi({
 
   // Tag types for cache invalidation
   tagTypes: [
+    // Account tags
     'account/user',
     'account/profile',
     'account/auth',
     'account/permissions',
     'account/menus',
+    'account/modules',
     'Customer',
     'Lead',
     'Opportunity',
@@ -104,8 +106,31 @@ export const api = createApi({
     'admin/Organization',
     'admin/Subscription',
     'admin/Plan',
+    'admin/PlanModule',
     'admin/Module',
     'admin/User',
+    'admin/Role',
+    'admin/MenuDisplay',
+    // Settings tags
+    'settings/Organization',
+    'settings/User',
+    'settings/Module',
+    'settings/ModuleUsers',
+    'settings/Department',
+    // Subscription tags
+    'subscription/Plan',
+    'subscription/PlanModule',
+    'subscription/Module',
+    'subscription/Subscription',
+    // PTM v2 tags
+    'ptm/Task',
+    'ptm/Project',
+    'ptm/Schedule',
+    'ptm/FocusTime',
+    'ptm/Availability',
+    'ptm/Activity',
+    'ptm/Note',
+    'ptm/Dependency',
   ],
 
   // Define endpoints in separate files for each module

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
+import serp.project.account.core.domain.dto.request.ChangePasswordRequest;
 import serp.project.account.core.domain.dto.request.CreateOrganizationDto;
 import serp.project.account.core.domain.dto.request.CreateUserDto;
 import serp.project.account.core.domain.dto.request.LoginRequest;
@@ -28,10 +29,9 @@ import serp.project.account.infrastructure.store.mapper.UserMapper;
 import serp.project.account.kernel.utils.CollectionUtils;
 import serp.project.account.kernel.utils.ResponseUtils;
 
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -42,6 +42,7 @@ public class AuthUseCase {
     private final IKeycloakUserService keycloakUserService;
     private final IRoleService roleService;
     private final ITokenService tokenService;
+    private final ICombineRoleService combineRoleService;
 
     private final ResponseUtils responseUtils;
 
@@ -66,6 +67,7 @@ public class AuthUseCase {
 
             var keycloakUser = userMapper.createUserMapper(user, organization.getId(), request.getPassword());
             userKeycloakId = keycloakUserService.createUser(keycloakUser);
+            log.info("Keycloak user id: {}", userKeycloakId);
 
             user.setKeycloakId(userKeycloakId);
             user.setPrimaryOrganizationId(organization.getId());
@@ -75,11 +77,7 @@ public class AuthUseCase {
             user = userService.updateUser(user.getId(), user);
             final Long userId = user.getId();
 
-            keycloakUserService.assignRealmRoles(userKeycloakId, orgRoles.stream()
-                    .filter(r -> r.getKeycloakClientId() == null)
-                    .map(RoleEntity::getName)
-                    .toList());
-            userService.addRolesToUser(user.getId(), orgRoles.stream().map(RoleEntity::getId).toList());
+            combineRoleService.assignRolesToUser(user, orgRoles);
 
             orgRoles.forEach(role -> {
                 organizationService.assignOrganizationToUser(organization.getId(), userId, role.getId(), true);
@@ -107,7 +105,12 @@ public class AuthUseCase {
             if (user == null) {
                 return responseUtils.badRequest(Constants.ErrorMessage.WRONG_EMAIL_OR_PASSWORD);
             }
+            if (!user.isActive()) {
+                return responseUtils.badRequest(Constants.ErrorMessage.USER_INACTIVE);
+            }
             var loginResponse = tokenService.getUserToken(user.getEmail(), request.getPassword());
+            user.setLastLoginAt(Instant.now().toEpochMilli());
+            userService.updateUser(user.getId(), user);
             return responseUtils.success(loginResponse);
         } catch (Exception e) {
             log.error("Login failed: {}", e.getMessage());
@@ -197,14 +200,8 @@ public class AuthUseCase {
             user = userService.updateUser(user.getId(), user);
             final Long userId = user.getId();
 
-            List<RoleEntity> combinedRoles = Stream.concat(
-                    systemRoles.stream(),
-                    orgRoles.stream()).collect(Collectors.toList());
-            keycloakUserService.assignRealmRoles(userKeycloakId, combinedRoles.stream()
-                    .filter(r -> r.getKeycloakClientId() == null)
-                    .map(RoleEntity::getName)
-                    .toList());
-            userService.addRolesToUser(user.getId(), combinedRoles.stream().map(RoleEntity::getId).toList());
+            combineRoleService.assignRolesToUser(user, systemRoles);
+            combineRoleService.assignRolesToUser(user, orgRoles);
 
             orgRoles.forEach(role -> {
                 organizationService.assignOrganizationToUser(organization.getId(), userId, role.getId(), true);
@@ -223,6 +220,34 @@ public class AuthUseCase {
                 keycloakUserService.deleteUser(userKeycloakId);
             }
             throw e;
+        }
+    }
+
+    public GeneralResponse<?> changePassword(Long userId,
+            ChangePasswordRequest request) {
+        try {
+            UserEntity user = userService.getUserById(userId);
+            if (user == null) {
+                return responseUtils.badRequest(Constants.ErrorMessage.USER_NOT_FOUND);
+            }
+            try {
+                tokenService.getUserToken(user.getEmail(), request.getOldPassword());
+            } catch (Exception e) {
+                return responseUtils.badRequest(Constants.ErrorMessage.INVALID_PASSWORD);
+            }
+            if (request.getOldPassword().equals(request.getNewPassword())) {
+                return responseUtils.badRequest(Constants.ErrorMessage.PASSWORD_CANNOT_BE_OLD_PASSWORD);
+            }
+
+            keycloakUserService.resetPassword(user.getKeycloakId(), request.getNewPassword());
+
+            return responseUtils.success("Password changed successfully");
+        } catch (AppException e) {
+            log.error("Change password failed: {}", e.getMessage());
+            return responseUtils.error(e.getCode(), e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error when changing password: {}", e.getMessage());
+            return responseUtils.internalServerError(e.getMessage());
         }
     }
 }

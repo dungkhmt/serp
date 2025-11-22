@@ -22,7 +22,7 @@ public interface IRoleService {
 
     List<RoleEntity> getAllRoles();
 
-    List<RoleEntity> getRolesByGroupId(Long groupId);
+    List<RoleEntity> getRolesByModuleId(Long moduleId);
 
     List<RoleEntity> getRolesByScope(RoleScope scope);
 
@@ -33,4 +33,8 @@ public interface IRoleService {
     RoleEntity getHighestRole(List<RoleEntity> roles);
 
     RoleEntity updateRole(Long roleId, UpdateRoleDto updateDto);
+
+    RoleEntity getRoleById(Long roleId);
+
+    RoleEntity getRoleByIdFromCache(Long roleId);
 }

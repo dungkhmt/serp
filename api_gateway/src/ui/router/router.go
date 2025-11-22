@@ -11,6 +11,7 @@ import (
 	"github.com/golibs-starter/golib/web/actuator"
 	account "github.com/serp/api-gateway/src/ui/controller/account"
 	ptm "github.com/serp/api-gateway/src/ui/controller/ptm"
+	purchase "github.com/serp/api-gateway/src/ui/controller/purchase"
 	"github.com/serp/api-gateway/src/ui/middleware"
 	"go.uber.org/fx"
 )
@@ -32,6 +33,7 @@ type RegisterRoutersIn struct {
 	ModuleAccessController     *account.ModuleAccessController
 	MenuDisplayController      *account.MenuDisplayController
 	OrganizationController     *account.OrganizationController
+	DepartmentController       *account.DepartmentController
 
 	ProjectController   *ptm.ProjectController
 	GroupTaskController *ptm.GroupTaskController
@@ -39,6 +41,14 @@ type RegisterRoutersIn struct {
 	CommentController   *ptm.CommentController
 	NoteController      *ptm.NoteController
 	UserTagController   *ptm.UserTagController
+
+	ProductController  *purchase.ProductController
+	AddressController  *purchase.AddressController
+	CategoryController *purchase.CategoryController
+	FacilityController *purchase.FacilityController
+	SupplierController *purchase.SupplierController
+	OrderController    *purchase.OrderController
+	ShipmentController *purchase.ShipmentController
 
 	JWTMiddleware  *middleware.JWTMiddleware
 	CorsMiddleware *middleware.CorsMiddleware
@@ -64,6 +74,7 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 		p.SubscriptionPlanController,
 		p.ModuleAccessController,
 		p.MenuDisplayController,
+		p.DepartmentController,
 		p.OrganizationController,
 	)
 
@@ -75,5 +86,16 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 		p.CommentController,
 		p.NoteController,
 		p.UserTagController,
+	)
+
+	RegisterPurchaseRoutes(
+		group,
+		p.ProductController,
+		p.AddressController,
+		p.CategoryController,
+		p.FacilityController,
+		p.SupplierController,
+		p.OrderController,
+		p.ShipmentController,
 	)
 }

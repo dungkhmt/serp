@@ -82,11 +82,8 @@ public class OrganizationSubscriptionEntity extends BaseEntity {
 
     @JsonIgnore
     public boolean isExpired() {
-        if (this.endDate == null) {
-            return false; // Perpetual (FREE plan)
-        }
-        long now = Instant.now().toEpochMilli();
-        return now > this.endDate;
+        return this.status == SubscriptionStatus.EXPIRED ||
+                (this.endDate != null && Instant.now().toEpochMilli() > this.endDate);
     }
 
     @JsonIgnore
@@ -97,6 +94,11 @@ public class OrganizationSubscriptionEntity extends BaseEntity {
     @JsonIgnore
     public boolean isPending() {
         return this.status == SubscriptionStatus.PENDING;
+    }
+
+    @JsonIgnore
+    public boolean isPendingUpgrade() {
+        return this.status == SubscriptionStatus.PENDING_UPGRADE;
     }
 
     @JsonIgnore
@@ -208,9 +210,10 @@ public class OrganizationSubscriptionEntity extends BaseEntity {
 
     @JsonIgnore
     public void activate(Long adminId) {
-        if (this.status != SubscriptionStatus.PENDING && this.status != SubscriptionStatus.TRIAL) {
-            throw new IllegalStateException("Can only activate PENDING or TRIAL subscriptions");
-        }
+        // if (!isPending() && !isTrial() && !isExpired()) {
+        // throw new IllegalStateException("Can only activate PENDING or TRIAL
+        // subscriptions");
+        // }
         this.status = SubscriptionStatus.ACTIVE;
         this.activatedBy = adminId;
         this.activatedAt = Instant.now().toEpochMilli();
@@ -222,6 +225,12 @@ public class OrganizationSubscriptionEntity extends BaseEntity {
             throw new IllegalStateException("Can only expire ACTIVE or TRIAL subscriptions");
         }
         this.status = SubscriptionStatus.EXPIRED;
+        this.setUpdatedAt(Instant.now().toEpochMilli());
+    }
+
+    @JsonIgnore
+    public void markPendingUpgrade() {
+        this.status = SubscriptionStatus.PENDING_UPGRADE;
         this.setUpdatedAt(Instant.now().toEpochMilli());
     }
 

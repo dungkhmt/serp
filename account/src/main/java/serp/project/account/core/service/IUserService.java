@@ -27,11 +27,19 @@ public interface IUserService {
 
     UserProfileResponse getUserProfile(Long userId);
 
+    List<UserEntity> getUsersByOrganizationId(Long organizationId);
+
+    List<UserEntity> getUsersByIds(List<Long> userIds);
+
     List<UserProfileResponse> getUserProfilesByIds(List<Long> userIds);
 
-    void addRolesToUser(Long userId, List<Long> roleId);
+    void addRolesToUser(Long userId, List<Long> roleIds);
+
+    void removeRolesFromUser(Long userId, List<Long> roleIds);
 
     void updateKeycloakUser(Long userId, String keycloakId);
 
     Pair<Long, List<UserEntity>> getUsers(GetUserParams params);
+
+    Integer countUsersByOrganizationId(Long organizationId);
 }

@@ -9,8 +9,10 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.request.CreateMenuDisplayDto;
+import serp.project.account.core.domain.dto.request.GetMenuDisplayParams;
 import serp.project.account.core.domain.dto.request.UpdateMenuDisplayDto;
 import serp.project.account.core.domain.entity.MenuDisplayEntity;
 import serp.project.account.core.domain.entity.MenuDisplayRoleEntity;
@@ -111,7 +114,18 @@ public class MenuDisplayService implements IMenuDisplayService {
     @Override
     public List<MenuDisplayEntity> getMenuDisplaysByModuleId(Long moduleId) {
         try {
-            return menuDisplayPort.getByModuleId(moduleId);
+            List<MenuDisplayEntity> menuDisplays = menuDisplayPort.getByModuleId(moduleId);
+            List<Long> menuDisplayIds = menuDisplays.stream()
+                    .map(MenuDisplayEntity::getId)
+                    .distinct().toList();
+            List<MenuDisplayRoleEntity> menuDisplayRoles = menuDisplayRolePort.getByMenuDisplayIds(menuDisplayIds);
+            Map<Long, List<MenuDisplayRoleEntity>> menuDisplayIdToRoles = menuDisplayRoles.stream()
+                    .collect(Collectors.groupingBy(MenuDisplayRoleEntity::getMenuDisplayId));
+            menuDisplays.forEach(menuDisplay -> {
+                List<MenuDisplayRoleEntity> assignedRoles = menuDisplayIdToRoles.get(menuDisplay.getId());
+                menuDisplay.setAssignedRoles(assignedRoles != null ? assignedRoles : List.of());
+            });
+            return menuDisplays;
         } catch (Exception e) {
             log.error("Error getting menu displays by moduleId: {}", e.getMessage());
             throw new AppException(Constants.ErrorMessage.GET_MENU_DISPLAY_FAILED);
@@ -123,7 +137,7 @@ public class MenuDisplayService implements IMenuDisplayService {
     public void assignMenuDisplaysToRole(Long roleId, List<Long> menuDisplayIds) {
         try {
             var assignedMenuDisplayIds = menuDisplayRolePort.getByRoleIds(List.of(roleId))
-                    .stream().map(MenuDisplayRoleEntity::getId)
+                    .stream().map(MenuDisplayRoleEntity::getMenuDisplayId)
                     .toList();
             var newMenuDisplayIds = menuDisplayIds.stream()
                     .filter(id -> !assignedMenuDisplayIds.contains(id))
@@ -138,8 +152,11 @@ public class MenuDisplayService implements IMenuDisplayService {
                                 .build())
                         .collect(Collectors.toList());
                 menuDisplayRolePort.save(newMenuDisplayRoles);
+                log.info("Assigned menu displays successfully to role: {}, menu displays: {}", roleId,
+                        newMenuDisplayIds);
+            } else {
+                log.info("No new menu displays to assign to role: {}", roleId);
             }
-            log.info("Assigned menu displays successfully to role: {}, menu displays: {}", roleId, newMenuDisplayIds);
         } catch (Exception e) {
             log.error("Error assigning menu displays to role: {}", e.getMessage());
             throw new AppException(Constants.ErrorMessage.ASSIGN_MENU_DISPLAY_FAILED);
@@ -150,16 +167,10 @@ public class MenuDisplayService implements IMenuDisplayService {
     @Transactional(rollbackFor = Exception.class)
     public void unassignMenuDisplaysFromRole(Long roleId, List<Long> menuDisplayIds) {
         try {
-            var assignedMenuDisplayRoles = menuDisplayRolePort.getByRoleIds(List.of(roleId))
-                    .stream()
-                    .filter(menuDisplayRole -> menuDisplayIds.contains(menuDisplayRole.getMenuDisplayId()))
-                    .collect(Collectors.toList());
-            if (!CollectionUtils.isEmpty(assignedMenuDisplayRoles)) {
-                var assignedMenuDisplayRoleIds = assignedMenuDisplayRoles.stream()
-                        .map(MenuDisplayRoleEntity::getId)
-                        .toList();
-                menuDisplayRolePort.deleteByIds(assignedMenuDisplayRoleIds);
+            if (roleId == null || CollectionUtils.isEmpty(menuDisplayIds)) {
+                return;
             }
+            menuDisplayRolePort.deleteByRoleIdAndMenuDisplayIds(roleId, menuDisplayIds);
             log.info("Unassigned menu displays successfully from role: {}, menu displays: {}", roleId, menuDisplayIds);
         } catch (Exception e) {
             log.error("Error unassigning menu displays from role: {}", e.getMessage());
@@ -187,6 +198,27 @@ public class MenuDisplayService implements IMenuDisplayService {
                                 Collectors.filtering(
                                         Objects::nonNull,
                                         Collectors.toList()))));
+    }
+
+    @Override
+    public List<MenuDisplayEntity> getByIds(List<Long> ids) {
+        return menuDisplayPort.getByIds(ids);
+    }
+
+    @Override
+    public Pair<List<MenuDisplayEntity>, Long> getAllMenuDisplays(GetMenuDisplayParams params) {
+        return menuDisplayPort.getAllMenuDisplays(params);
+    }
+
+    @Override
+    public List<MenuDisplayRoleEntity> getMenuDisplayRolesByMenuDisplayIds(List<Long> menuDisplayIds) {
+        return menuDisplayRolePort.getByMenuDisplayIds(menuDisplayIds);
+    }
+
+    @Override
+    public MenuDisplayEntity getMenuDisplayById(Long id) {
+        return Optional.ofNullable(menuDisplayPort.getById(id))
+                .orElseThrow(() -> new AppException(Constants.ErrorMessage.MENU_DISPLAY_NOT_FOUND));
     }
 
 }

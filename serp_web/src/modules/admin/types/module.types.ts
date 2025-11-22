@@ -12,7 +12,7 @@ export type ModuleStatus =
   | 'MAINTENANCE'
   | 'DISABLED';
 
-export type ModuleType = 'CORE' | 'ADDON' | 'INTEGRATION';
+export type ModuleType = 'SYSTEM' | 'CUSTOM';
 
 export type PricingModel = 'FREE' | 'FIXED' | 'PER_USER' | 'TIERED';
 
