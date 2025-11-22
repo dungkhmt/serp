@@ -5,13 +5,14 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   Button,
   Avatar,
   AvatarFallback,
+  AvatarImage,
   ThemeToggle,
   Input,
 } from '@/shared/components';
@@ -25,15 +26,24 @@ import {
   Shield,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
+import { useAuth, useUser } from '@/modules/account';
 
 interface AdminHeaderProps {
   className?: string;
+  scrollContainerRef?: React.RefObject<HTMLElement | null>;
 }
 
-export const AdminHeader: React.FC<AdminHeaderProps> = ({ className }) => {
+export const AdminHeader: React.FC<AdminHeaderProps> = ({
+  className,
+  scrollContainerRef,
+}) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [notifications, setNotifications] = useState(0);
+  const [hidden, setHidden] = useState(false);
+
+  const { logout } = useAuth();
+  const { getDisplayName, getInitials, user } = useUser();
 
   const router = useRouter();
   const pathname = usePathname();
@@ -59,16 +69,57 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ className }) => {
   };
 
   const handleLogout = () => {
-    // TODO: Implement logout
+    logout();
     router.push('/auth');
   };
+
+  // Hide header when scrolling down, show when scrolling up.
+  useEffect(() => {
+    const container = scrollContainerRef?.current ?? null;
+    let last = container
+      ? container.scrollTop
+      : typeof window !== 'undefined'
+        ? window.scrollY
+        : 0;
+    let ticking = false;
+    const threshold = 8; // px threshold to avoid flicker
+
+    const onScroll = () => {
+      const current = container ? container.scrollTop : window.scrollY;
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          if (current <= 0) {
+            setHidden(false);
+          } else if (current > last + threshold) {
+            setHidden(true);
+          } else if (current < last - threshold) {
+            setHidden(false);
+          }
+          last = current;
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    const el: HTMLElement | Window = container ?? window;
+    el.addEventListener('scroll', onScroll, {
+      passive: true,
+    } as EventListenerOptions);
+
+    return () => {
+      el.removeEventListener('scroll', onScroll as EventListener);
+    };
+  }, [scrollContainerRef]);
 
   return (
     <header
       className={cn(
-        'sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60',
+        'sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-transform duration-200',
+        hidden ? '-translate-y-16' : 'translate-y-0',
         className
       )}
+      aria-hidden={hidden}
     >
       <div className='flex h-16 items-center justify-between px-6'>
         {/* Left Section - Breadcrumbs */}
@@ -138,12 +189,15 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ className }) => {
               className='flex items-center gap-2 rounded-lg p-2 hover:bg-muted transition-colors'
             >
               <Avatar className='h-8 w-8'>
+                {user?.avatarUrl && (
+                  <AvatarImage src={user.avatarUrl} alt={getDisplayName()} />
+                )}
                 <AvatarFallback className='bg-primary text-primary-foreground'>
-                  <Shield className='h-4 w-4' />
+                  {user?.avatarUrl ? null : <Shield className='h-4 w-4' />}
                 </AvatarFallback>
               </Avatar>
               <div className='hidden sm:block text-left'>
-                <p className='text-sm font-medium'>System Admin</p>
+                <p className='text-sm font-medium'>{getDisplayName()}</p>
                 <p className='text-xs text-muted-foreground'>SUPER_ADMIN</p>
               </div>
               <ChevronDown className='h-4 w-4 text-muted-foreground' />
@@ -153,11 +207,6 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ className }) => {
             {showUserMenu && (
               <div className='absolute right-0 top-full mt-2 w-56 bg-background border rounded-md shadow-lg z-50'>
                 <div className='p-2'>
-                  <div className='px-2 py-2 border-b'>
-                    <p className='font-medium'>System Administrator</p>
-                    <p className='text-xs text-muted-foreground'>SUPER_ADMIN</p>
-                  </div>
-
                   <div className='py-2'>
                     <Button
                       variant='ghost'
@@ -175,7 +224,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ className }) => {
                       className='w-full justify-start'
                       onClick={() => {
                         setShowUserMenu(false);
-                        router.push('/admin/settings');
+                        router.push('/settings');
                       }}
                     >
                       <Settings className='mr-2 h-4 w-4' />

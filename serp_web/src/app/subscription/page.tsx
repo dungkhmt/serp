@@ -11,23 +11,22 @@ import {
   PlanCard,
   BillingToggle,
   ComparisonTable,
-  PaymentForm,
-  OrderSummaryComponent,
-  AddOnsSection,
   FAQSection,
   TrustIndicators,
+  ModuleSelector,
+  useGetSubscriptionPlansQuery,
+  useSubscribeMutation,
+  useSubscribeCustomPlanMutation,
+  useGetAvailableModulesQuery,
 } from '@/modules/subscription';
 import {
   BillingCycle,
-  PaymentInfo,
-  AddOn as AddOnType,
-  OrderSummary as OrderSummaryType,
+  SubscriptionPlan,
+  UISubscriptionPlan,
 } from '@/modules/subscription/types';
 import {
   SUBSCRIPTION_PLANS,
-  ADD_ONS,
   FAQS,
-  TAX_RATE,
 } from '@/modules/subscription/types/constants';
 import {
   Dialog,
@@ -37,176 +36,151 @@ import {
   DialogHeader,
   DialogTitle,
   Button,
+  Card,
 } from '@/shared/components/ui';
+import { Separator } from '@/shared/components/ui/separator';
 import { toast } from 'sonner';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Settings } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { getErrorMessage } from '@/lib/store/api/utils';
 
 export default function SubscriptionPage() {
   const router = useRouter();
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
-  const [addOns, setAddOns] = useState<AddOnType[]>(
-    ADD_ONS.map((addon) => ({ ...addon, selected: false, quantity: 1 }))
-  );
-  const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [promoCode, setPromoCode] = useState<
-    { code: string; discount: number; type: 'percentage' | 'fixed' } | undefined
-  >(undefined);
+  const [showCustomPlanDialog, setShowCustomPlanDialog] = useState(false);
+  const [selectedModules, setSelectedModules] = useState<number[]>([]);
+
+  const {
+    data: bePlans,
+    isLoading,
+    isError,
+  } = useGetSubscriptionPlansQuery({
+    isCustom: false,
+    pageSize: 100,
+  });
+  const { data: modules, isLoading: isLoadingModules } =
+    useGetAvailableModulesQuery();
+  const [subscribe, { isLoading: isSubscribing }] = useSubscribeMutation();
+  const [subscribeCustomPlan, { isLoading: isSubscribingCustom }] =
+    useSubscribeCustomPlanMutation();
+
+  const availableModules = modules || [];
+
+  const mappedPlans = useMemo((): UISubscriptionPlan[] => {
+    if (!bePlans) return SUBSCRIPTION_PLANS;
+
+    const templateIndexByKey = new Map<string, UISubscriptionPlan>();
+    for (const tpl of SUBSCRIPTION_PLANS) {
+      templateIndexByKey.set(tpl.id.toLowerCase(), tpl);
+      templateIndexByKey.set(tpl.name.toLowerCase(), tpl);
+    }
+
+    const normalize = (s?: string) => (s ? s.trim().toLowerCase() : '');
+
+    const toUiPlan = (p: SubscriptionPlan): UISubscriptionPlan => {
+      const key1 = normalize(p.planCode);
+      const key2 = normalize(p.planName);
+      const tpl = templateIndexByKey.get(key1) || templateIndexByKey.get(key2);
+      const base = tpl || SUBSCRIPTION_PLANS[0];
+
+      return {
+        ...base,
+        id: String(p.id),
+        name: p.planName,
+        description: p.description || base.description,
+        monthlyPrice: Number(p.monthlyPrice ?? 0),
+        yearlyPrice: Number(p.yearlyPrice ?? 0),
+        maxUsers: p.maxUsers ?? base.maxUsers,
+      };
+    };
+
+    return bePlans.data.items
+      .filter((p) => p.isActive && !p.isCustom)
+      .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
+      .map(toUiPlan);
+  }, [bePlans]);
 
   const selectedPlan = useMemo(
-    () => SUBSCRIPTION_PLANS.find((plan) => plan.id === selectedPlanId),
-    [selectedPlanId]
+    () => mappedPlans.find((plan) => plan.id === selectedPlanId),
+    [selectedPlanId, mappedPlans]
   );
 
-  const orderSummary: OrderSummaryType | null = useMemo(() => {
-    if (!selectedPlan) return null;
-
-    const basePrice =
-      billingCycle === 'monthly'
-        ? selectedPlan.monthlyPrice
-        : selectedPlan.yearlyPrice;
-
-    const addOnsTotal = addOns
-      .filter((addon) => addon.selected)
-      .reduce((sum, addon) => sum + addon.price * (addon.quantity || 1), 0);
-
-    const subtotal = basePrice + addOnsTotal;
-
-    let discountAmount = 0;
-    if (promoCode) {
-      discountAmount =
-        promoCode.type === 'percentage'
-          ? (subtotal * promoCode.discount) / 100
-          : promoCode.discount;
-    }
-
-    const afterDiscount = subtotal - discountAmount;
-    const tax = afterDiscount * TAX_RATE;
-    const total = afterDiscount + tax;
-
-    const nextBillingDate = new Date();
-    nextBillingDate.setMonth(
-      nextBillingDate.getMonth() + (billingCycle === 'monthly' ? 1 : 12)
-    );
-
-    return {
-      planId: selectedPlan.id,
-      planName: selectedPlan.name,
-      billingCycle,
-      basePrice,
-      addOns: addOns.filter((addon) => addon.selected),
-      promoCode,
-      subtotal,
-      tax,
-      total,
-      nextBillingDate: nextBillingDate.toISOString(),
-    };
-  }, [selectedPlan, billingCycle, addOns, promoCode]);
-
   const handlePlanSelect = (planId: string) => {
-    const plan = SUBSCRIPTION_PLANS.find((p) => p.id === planId);
+    const plan = mappedPlans.find((p) => p.id === planId);
     if (!plan) return;
-
     setSelectedPlanId(planId);
-
-    // Free plan doesn't need payment
-    if (plan.tier === 'free') {
-      handleFreeSignup();
-      return;
-    }
-
-    // Enterprise needs to contact sales
-    if (plan.tier === 'enterprise') {
-      toast.info('Contact Sales', {
-        description: 'Please contact our sales team for enterprise pricing.',
-      });
-      return;
-    }
-
-    // Show payment form for paid plans
-    setShowPaymentForm(true);
-    setTimeout(() => {
-      document.getElementById('payment-section')?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      });
-    }, 100);
-  };
-
-  const handleFreeSignup = () => {
-    toast.success('Welcome!', {
-      description: 'You can now start using SERP with the Free plan.',
-    });
-    setTimeout(() => {
-      router.push('/');
-    }, 2000);
-  };
-
-  const handleAddOnToggle = (addOnId: string) => {
-    setAddOns((prev) =>
-      prev.map((addon) =>
-        addon.id === addOnId ? { ...addon, selected: !addon.selected } : addon
-      )
-    );
-  };
-
-  const handleAddOnQuantityChange = (addOnId: string, quantity: number) => {
-    setAddOns((prev) =>
-      prev.map((addon) =>
-        addon.id === addOnId ? { ...addon, quantity } : addon
-      )
-    );
-  };
-
-  const handleApplyPromoCode = async (code: string): Promise<boolean> => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    // Mock promo codes
-    const validPromoCodes: Record<
-      string,
-      { discount: number; type: 'percentage' | 'fixed' }
-    > = {
-      SAVE20: { discount: 20, type: 'percentage' },
-      WELCOME10: { discount: 10, type: 'fixed' },
-    };
-
-    if (validPromoCodes[code]) {
-      setPromoCode({ code, ...validPromoCodes[code] });
-      toast.success('Promo code applied!');
-      return true;
-    }
-
-    return false;
-  };
-
-  const handlePaymentSubmit = (paymentInfo: PaymentInfo) => {
-    // Payment info would be sent to payment gateway here
-    // Do NOT log sensitive payment information
     setShowConfirmDialog(true);
   };
 
-  const handleConfirmSubscription = () => {
-    setShowConfirmDialog(false);
-    toast.success('Subscription Activated!', {
-      description: `Welcome to SERP ${selectedPlan?.name}! Your subscription is now active.`,
-    });
-
-    setTimeout(() => {
-      router.push('/');
-    }, 2000);
+  const handleCustomPlanClick = () => {
+    setShowCustomPlanDialog(true);
   };
 
-  const handleCancelPayment = () => {
-    setShowPaymentForm(false);
-    setSelectedPlanId(null);
-    setAddOns((prev) =>
-      prev.map((addon) => ({ ...addon, selected: false, quantity: 1 }))
+  const handleModuleToggle = (moduleId: number) => {
+    setSelectedModules((prev) =>
+      prev.includes(moduleId)
+        ? prev.filter((id) => id !== moduleId)
+        : [...prev, moduleId]
     );
-    setPromoCode(undefined);
+  };
+
+  const handleConfirmSubscription = async () => {
+    if (!selectedPlanId) return;
+    try {
+      const planIdNum = Number(selectedPlanId);
+      await subscribe({
+        planId: planIdNum,
+        billingCycle: billingCycle,
+        isAutoRenew: false,
+      }).unwrap();
+      setShowConfirmDialog(false);
+      toast.success('Subscription is processing!', {
+        description: `Wait Admin to confirm ${selectedPlan?.name}!`,
+      });
+      setTimeout(() => router.push('/'), 1200);
+    } catch (e: any) {
+      const message =
+        getErrorMessage(e) || 'Failed to subscribe. Please try again.';
+      toast.error('Subscription Failed', { description: message });
+    }
+  };
+
+  const handleConfirmCustomSubscription = async () => {
+    if (selectedModules.length === 0) {
+      toast.error('Please select at least one module');
+      return;
+    }
+
+    try {
+      await subscribeCustomPlan({
+        billingCycle: billingCycle,
+        isAutoRenew: false,
+        moduleIds: selectedModules,
+      }).unwrap();
+      setShowCustomPlanDialog(false);
+      setSelectedModules([]);
+      toast.success('Custom subscription is processing!', {
+        description: 'Wait Admin to confirm your custom plan!',
+      });
+      setTimeout(() => router.push('/'), 1200);
+    } catch (e: any) {
+      const message =
+        getErrorMessage(e) || 'Failed to subscribe. Please try again.';
+      toast.error('Subscription Failed', { description: message });
+    }
+  };
+
+  const handleCancel = () => {
+    setSelectedPlanId(null);
+    setShowConfirmDialog(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCancelCustom = () => {
+    setShowCustomPlanDialog(false);
+    setSelectedModules([]);
   };
 
   return (
@@ -214,7 +188,6 @@ export default function SubscriptionPage() {
       <Header />
 
       <main className='container mx-auto px-4 py-12'>
-        {/* Back Button */}
         <button
           onClick={() => router.push('/')}
           className='flex items-center gap-2 text-muted-foreground hover:text-foreground mb-8 transition-colors'
@@ -223,7 +196,6 @@ export default function SubscriptionPage() {
           Back to Home
         </button>
 
-        {/* Hero Section */}
         <div className='text-center mb-12'>
           <h1 className='text-4xl md:text-5xl font-bold mb-4'>
             Choose Your Perfect Plan
@@ -234,77 +206,64 @@ export default function SubscriptionPage() {
           </p>
         </div>
 
-        {/* Billing Toggle */}
-        <BillingToggle billingCycle={billingCycle} onToggle={setBillingCycle} />
-
-        {/* Plan Cards */}
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12'>
-          {SUBSCRIPTION_PLANS.map((plan) => (
-            <PlanCard
-              key={plan.id}
-              plan={plan}
-              billingCycle={billingCycle}
-              onSelect={handlePlanSelect}
-              isSelected={selectedPlanId === plan.id}
-            />
-          ))}
-        </div>
-
-        {/* Comparison Table */}
-        <div className='mb-12'>
-          <ComparisonTable plans={SUBSCRIPTION_PLANS} />
-        </div>
-
-        {/* Trust Indicators */}
-        <div className='mb-12'>
-          <TrustIndicators />
-        </div>
-
-        {/* Payment Section (shown when a paid plan is selected) */}
-        {showPaymentForm && selectedPlan && orderSummary && (
-          <div
-            id='payment-section'
-            className='scroll-mt-20 mb-12 border-t pt-12'
-          >
-            <h2 className='text-3xl font-bold mb-8 text-center'>
-              Complete Your Subscription
-            </h2>
-
-            <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
-              {/* Left Column - Payment & Add-ons */}
-              <div className='lg:col-span-2 space-y-8'>
-                {/* Add-ons */}
-                <AddOnsSection
-                  addOns={addOns}
-                  onToggle={handleAddOnToggle}
-                  onQuantityChange={handleAddOnQuantityChange}
-                />
-
-                {/* Payment Form */}
-                <PaymentForm
-                  onSubmit={handlePaymentSubmit}
-                  onCancel={handleCancelPayment}
-                />
-              </div>
-
-              {/* Right Column - Order Summary (Sticky) */}
-              <div className='lg:col-span-1'>
-                <OrderSummaryComponent
-                  summary={orderSummary}
-                  onApplyPromoCode={handleApplyPromoCode}
-                />
-              </div>
-            </div>
+        {isError && (
+          <div className='mb-6 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive'>
+            Could not load plans from server. Showing default plans.
           </div>
         )}
 
-        {/* FAQ Section */}
+        <BillingToggle billingCycle={billingCycle} onToggle={setBillingCycle} />
+
+        <Card className='mb-8 p-6 border-2 border-dashed border-primary/30 bg-primary/5'>
+          <div className='flex items-center justify-between'>
+            <div className='flex-1'>
+              <h3 className='text-lg font-semibold flex items-center gap-2'>
+                <Settings className='h-5 w-5' />
+                Need a Custom Plan?
+              </h3>
+              <p className='text-sm text-muted-foreground mt-1'>
+                Select only the modules you need and create your personalized
+                plan
+              </p>
+            </div>
+            <Button onClick={handleCustomPlanClick} size='lg'>
+              Create Custom Plan
+            </Button>
+          </div>
+        </Card>
+
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12'>
+          {(isLoading ? SUBSCRIPTION_PLANS : mappedPlans).map((plan) => {
+            const backendPlan = bePlans?.data.items.find(
+              (p) => String(p.id) === plan.id
+            );
+            return (
+              <PlanCard
+                key={plan.id}
+                plan={plan}
+                billingCycle={billingCycle}
+                onSelect={handlePlanSelect}
+                isSelected={selectedPlanId === plan.id}
+                modules={backendPlan?.modules}
+              />
+            );
+          })}
+        </div>
+
+        <div className='mb-12'>
+          <ComparisonTable
+            plans={isLoading ? SUBSCRIPTION_PLANS : mappedPlans}
+          />
+        </div>
+
+        <div className='mb-12'>
+          <TrustIndicators />
+        </div>
         <div className='mb-12'>
           <FAQSection faqs={FAQS} />
         </div>
       </main>
 
-      {/* Confirmation Dialog */}
       <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <DialogContent>
           <DialogHeader>
@@ -326,20 +285,73 @@ export default function SubscriptionPage() {
             <div className='flex justify-between text-lg'>
               <span className='font-semibold'>Total:</span>
               <span className='font-bold text-primary'>
-                ${orderSummary?.total.toFixed(2)}
+                $
+                {billingCycle === 'monthly'
+                  ? selectedPlan?.monthlyPrice
+                  : selectedPlan?.yearlyPrice}
               </span>
             </div>
           </div>
 
           <DialogFooter>
-            <Button
-              variant='outline'
-              onClick={() => setShowConfirmDialog(false)}
-            >
+            <Button variant='outline' onClick={handleCancel}>
               Cancel
             </Button>
-            <Button onClick={handleConfirmSubscription}>
-              Confirm Subscription
+            <Button
+              onClick={handleConfirmSubscription}
+              disabled={isSubscribing}
+            >
+              {isSubscribing ? 'Subscribing...' : 'Confirm Subscription'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Custom Plan Dialog */}
+      <Dialog
+        open={showCustomPlanDialog}
+        onOpenChange={setShowCustomPlanDialog}
+      >
+        <DialogContent className='!max-w-5xl max-h-[85vh] overflow-hidden flex flex-col'>
+          <DialogHeader>
+            <DialogTitle>Create Custom Plan</DialogTitle>
+            <DialogDescription>
+              Select the modules you need for your custom plan
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className='flex-1 overflow-y-auto py-4 px-2'>
+            <div className='space-y-4'>
+              <div className='flex items-center justify-between px-1'>
+                <span className='text-sm text-muted-foreground'>
+                  Billing Cycle:
+                </span>
+                <span className='font-semibold capitalize'>{billingCycle}</span>
+              </div>
+              <Separator />
+
+              <ModuleSelector
+                modules={availableModules}
+                selectedModules={selectedModules}
+                onModuleToggle={handleModuleToggle}
+                isLoading={isLoadingModules}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className='border-t pt-4 flex-shrink-0'>
+            <Button variant='outline' onClick={handleCancelCustom}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmCustomSubscription}
+              disabled={isSubscribingCustom || selectedModules.length === 0}
+            >
+              {isSubscribingCustom
+                ? 'Processing...'
+                : `Subscribe (${selectedModules.length} module${
+                    selectedModules.length !== 1 ? 's' : ''
+                  })`}
             </Button>
           </DialogFooter>
         </DialogContent>

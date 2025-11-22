@@ -17,3 +17,11 @@ export {
   useGetUserPermissionsQuery,
   useGetUserMenusQuery,
 } from './userApi';
+
+export { moduleApi, useGetMyModulesQuery } from './moduleApi';
+
+export {
+  menuApi,
+  useGetMenuDisplaysByModuleAndUserQuery,
+  useLazyGetMenuDisplaysByModuleAndUserQuery,
+} from './menuApi';

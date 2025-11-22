@@ -40,6 +40,18 @@ export { ThemeToggle } from './theme-toggle';
 export { Switch } from './switch';
 export { Checkbox } from './checkbox';
 
+// Select Components
+export {
+  Select,
+  SelectGroup,
+  SelectValue,
+  SelectTrigger,
+  SelectContent,
+  SelectLabel,
+  SelectItem,
+  SelectSeparator,
+} from './select';
+
 // Dialog Components
 export {
   Dialog,
@@ -54,6 +66,25 @@ export {
   DialogDescription,
 } from './dialog';
 
+// DropdownMenu Components
+export {
+  DropdownMenu,
+  DropdownMenuPortal,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuItem,
+  DropdownMenuCheckboxItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+} from './dropdown-menu';
+
 // Accordion Components
 export {
   Accordion,
@@ -61,3 +92,14 @@ export {
   AccordionTrigger,
   AccordionContent,
 } from './accordion';
+
+// Alert Components
+export { Alert, AlertTitle, AlertDescription } from './alert';
+
+// Tooltip Components
+export {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from './tooltip';

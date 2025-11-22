@@ -6,14 +6,9 @@
 'use client';
 
 import { AuthLayout } from '@/modules/account';
-import { useRouter } from 'next/navigation';
 
 export default function AuthPage() {
-  const router = useRouter();
-
-  const handleAuthSuccess = () => {
-    router.push('/');
-  };
+  const handleAuthSuccess = () => {};
 
   return <AuthLayout onAuthSuccess={handleAuthSuccess} />;
 }
