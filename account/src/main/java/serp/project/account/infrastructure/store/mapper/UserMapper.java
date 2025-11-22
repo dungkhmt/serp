@@ -133,6 +133,7 @@ public class UserMapper extends BaseMapper {
 
         return UserProfileResponse.builder()
                 .id(user.getId())
+                .keycloakId(user.getKeycloakId())
                 .email(user.getEmail())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
@@ -210,6 +211,10 @@ public class UserMapper extends BaseMapper {
 
         if (update.getUpdatedAt() != null) {
             existing.setUpdatedAt(update.getUpdatedAt());
+        }
+
+        if (update.getKeycloakId() != null && !update.getKeycloakId().trim().isEmpty()) {
+            existing.setKeycloakId(update.getKeycloakId());
         }
 
         return existing;

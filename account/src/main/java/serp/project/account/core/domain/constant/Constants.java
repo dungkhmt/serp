@@ -56,6 +56,7 @@ public class Constants {
         public static final String ROLE_NOT_FOUND = "Role not found";
         public static final String INVALID_ROLE_SCOPE = "Invalid role scope";
         public static final String INVALID_ROLE_TYPE = "Invalid role type";
+        public static final String NO_ROLES_FOUND_FOR_MODULE = "No roles found for module";
 
         public static final String GROUP_ALREADY_EXISTS = "Group already exists";
         public static final String GROUP_NOT_FOUND = "Group not found";
@@ -64,11 +65,17 @@ public class Constants {
         public static final String USER_ALREADY_EXISTS = "User already exists";
         public static final String USER_NOT_FOUND = "User not found";
         public static final String CREATE_USER_FAILED = "Create user failed";
+        public static final String USER_INACTIVE = "User is inactive";
+        public static final String USER_NOT_IN_ORGANIZATION = "User does not belong to the organization";
 
         public static final String WRONG_EMAIL_OR_PASSWORD = "Wrong email or password";
+        public static final String INVALID_PASSWORD = "Invalid password";
+        public static final String PASSWORD_MISMATCH = "Password mismatch";
+        public static final String PASSWORD_CANNOT_BE_OLD_PASSWORD = "New password cannot be the same as the old password";
         public static final String INVALID_REFRESH_TOKEN = "Invalid refresh token";
         public static final String TOKEN_EXPIRED = "Token expired";
 
+        public static final String INVALID_MENU_TYPE = "Invalid menu type";
         public static final String MENU_DISPLAY_ALREADY_EXISTS = "Menu display already exists";
         public static final String MENU_DISPLAY_NOT_FOUND = "Menu display not found";
         public static final String PARENT_MENU_DISPLAY_NOT_FOUND = "Parent menu display not found";
@@ -78,6 +85,8 @@ public class Constants {
         public static final String GET_MENU_DISPLAY_FAILED = "Get menu display failed";
         public static final String ASSIGN_MENU_DISPLAY_FAILED = "Assign menu display failed";
         public static final String UNASSIGN_MENU_DISPLAY_FAILED = "Unassign menu display failed";
+        public static final String ROLE_CANNOT_ASSIGN_MENU_DISPLAYS = "This role cannot be assigned menu displays";
+        public static final String NO_VALID_MENU_DISPLAYS_TO_ASSIGN = "No valid menu displays to assign to the role";
 
         // Organization errors
         public static final String ORGANIZATION_NOT_FOUND = "Organization not found";
@@ -97,18 +106,34 @@ public class Constants {
         public static final String SUBSCRIPTION_NOT_PENDING_APPROVAL = "Subscription not pending approval";
         public static final String SUBSCRIPTION_NOT_IN_TRIAL = "Subscription not in trial";
         public static final String SUBSCRIPTION_CANNOT_BE_UPGRADED = "Subscription cannot be upgraded";
+        public static final String SUBSCRIPTION_ALREADY_ACTIVE = "Subscription already active";
         public static final String ACTIVE_SUBSCRIPTION_NOT_FOUND = "Active subscription not found";
         public static final String SUBSCRIPTION_NOT_FOUND = "Subscription not found";
         public static final String NO_ACTIVE_SUBSCRIPTION = "No active subscription";
         public static final String PLAN_NOT_ACTIVE = "Plan not active";
-        
+        public static final String NO_NEW_MODULES_TO_ADD = "No new modules to add to the subscription plan";
+
         // Module Access errors
         public static final String ORGANIZATION_CANNOT_ACCESS_MODULE = "Organization does not have access to this module";
+        public static final String ORGANIZATION_CANNOT_ACCESS_MODULE_ID = "Organization does not have access to the module %d";
         public static final String MODULE_NOT_AVAILABLE = "Module is not available";
         public static final String USER_ALREADY_HAS_MODULE_ACCESS = "User already has access to this module";
         public static final String MODULE_NOT_IN_SUBSCRIPTION_PLAN = "Module not found in subscription plan";
         public static final String MAX_USERS_LIMIT_REACHED = "Maximum users limit reached for this module";
         public static final String NO_PERMISSION_TO_ACCESS_ORGANIZATION = "You don't have permission to access this organization";
+
+        // Department errors
+        public static final String DEPARTMENT_NOT_FOUND = "Department not found";
+        public static final String DEPARTMENT_INACTIVE = "Department is inactive";
+        public static final String DEPARTMENT_ALREADY_EXISTS = "Department already exists";
+        public static final String CIRCULAR_PARENT_RELATIONSHIP = "Circular parent relationship detected";
+        public static final String MANAGER_NOT_IN_ORGANIZATION = "Manager must belong to the same organization";
+        public static final String PARENT_DEPARTMENT_NOT_IN_ORGANIZATION = "Parent department must belong to the same organization";
+        public static final String DEPARTMENT_CANNOT_BE_OWN_PARENT = "Department cannot be its own parent";
+        public static final String USER_ALREADY_IN_DEPARTMENT = "User already assigned to this department";
+        public static final String USER_NOT_IN_DEPARTMENT = "User not found in department";
+        public static final String PRIMARY_DEPARTMENT_CONFLICT = "Primary department conflict";
+        public static final String MAX_DEPARTMENT_DEPTH_EXCEEDED = "Maximum department depth exceeded";
     }
 
     @UtilityClass

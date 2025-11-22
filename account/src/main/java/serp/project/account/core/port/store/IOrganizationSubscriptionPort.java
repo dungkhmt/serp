@@ -5,11 +5,14 @@
 
 package serp.project.account.core.port.store;
 
+import serp.project.account.core.domain.dto.request.GetSubscriptionParams;
 import serp.project.account.core.domain.entity.OrganizationSubscriptionEntity;
 import serp.project.account.core.domain.enums.SubscriptionStatus;
 
 import java.util.List;
 import java.util.Optional;
+
+import org.springframework.data.util.Pair;
 
 public interface IOrganizationSubscriptionPort {
 
@@ -21,9 +24,13 @@ public interface IOrganizationSubscriptionPort {
 
     Optional<OrganizationSubscriptionEntity> getActiveByOrganizationId(Long organizationId);
 
+    Optional<OrganizationSubscriptionEntity> getActiveOrPendingUpgradeByOrganizationId(Long organizationId);
+
     List<OrganizationSubscriptionEntity> getByOrganizationId(Long organizationId);
 
     List<OrganizationSubscriptionEntity> getByStatus(SubscriptionStatus status);
+
+    List<OrganizationSubscriptionEntity> getByPlanId(Long planId);
 
     /**
      * Find subscriptions expiring before the given timestamp
@@ -36,4 +43,6 @@ public interface IOrganizationSubscriptionPort {
     List<OrganizationSubscriptionEntity> getTrialEndingBefore(Long timestamp);
 
     boolean existsActiveSubscriptionForOrganization(Long organizationId);
+
+    Pair<List<OrganizationSubscriptionEntity>, Long> getAllSubscriptions(GetSubscriptionParams params);
 }

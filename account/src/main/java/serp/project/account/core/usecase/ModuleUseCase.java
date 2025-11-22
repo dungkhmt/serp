@@ -1,3 +1,8 @@
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project
+ */
+
 package serp.project.account.core.usecase;
 
 import lombok.RequiredArgsConstructor;
@@ -9,7 +14,9 @@ import serp.project.account.core.domain.dto.request.CreateModuleDto;
 import serp.project.account.core.domain.dto.request.UpdateModuleDto;
 import serp.project.account.core.domain.entity.UserModuleAccessEntity;
 import serp.project.account.core.service.IModuleService;
+import serp.project.account.core.service.IRoleService;
 import serp.project.account.core.service.IUserModuleAccessService;
+import serp.project.account.infrastructure.store.mapper.UserModuleAccessMapper;
 import serp.project.account.kernel.utils.ResponseUtils;
 
 @Service
@@ -18,8 +25,11 @@ import serp.project.account.kernel.utils.ResponseUtils;
 public class ModuleUseCase {
     private final IModuleService moduleService;
     private final IUserModuleAccessService userModuleAccessService;
+    private final IRoleService roleService;
 
     private final ResponseUtils responseUtils;
+
+    private final UserModuleAccessMapper userModuleAccessMapper;
 
     public GeneralResponse<?> createModule(CreateModuleDto request) {
         try {
@@ -84,10 +94,26 @@ public class ModuleUseCase {
             }
 
             var accesses = userModuleAccessService.getUserModuleAccesses(userId, organizationId);
-            return responseUtils.success(accesses);
+            var result = accesses.stream()
+                    .map(access -> {
+                        var module = moduleService.getModuleByIdFromCache(access.getModuleId());
+                        return userModuleAccessMapper.toModuleAccessResponse(access, module);
+                    })
+                    .toList();
+            return responseUtils.success(result);
         } catch (Exception e) {
             log.error("Error getting user modules: {}", e.getMessage());
             throw e;
+        }
+    }
+
+    public GeneralResponse<?> getRolesInModule(Long moduleId) {
+        try {
+            var roles = roleService.getRolesByModuleId(moduleId);
+            return responseUtils.success(roles);
+        } catch (Exception e) {
+            log.error("Error getting roles in module: {}", e.getMessage());
+            return responseUtils.internalServerError(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
         }
     }
 }
