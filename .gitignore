@@ -13,6 +13,7 @@ plans/
 
 application.yml
 application-prod.yml
+*.properties
 
 default.yaml
 local.yaml
