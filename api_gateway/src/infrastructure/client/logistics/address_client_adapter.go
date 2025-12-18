@@ -1,7 +1,7 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project
-*/
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project
+ */
 
 package adapter
 
@@ -10,9 +10,9 @@ import (
 	"fmt"
 
 	"github.com/golibs-starter/golib/log"
-	request "github.com/serp/api-gateway/src/core/domain/dto/request/purchase"
+	request "github.com/serp/api-gateway/src/core/domain/dto/request/logistics"
 	"github.com/serp/api-gateway/src/core/domain/dto/response"
-	port "github.com/serp/api-gateway/src/core/port/client/purchase"
+	port "github.com/serp/api-gateway/src/core/port/client/logistics"
 	"github.com/serp/api-gateway/src/kernel/properties"
 	"github.com/serp/api-gateway/src/kernel/utils"
 )
@@ -22,12 +22,12 @@ type AddressClientAdapter struct {
 	circuitBreaker *utils.CircuitBreaker
 }
 
-func (a *AddressClientAdapter) CreateAddress(ctx context.Context, req *request.CreateAddressRequest) (*response.BaseResponse, error) {
+func (a *AddressClientAdapter) CreateAddress(ctx context.Context, req *request.AddressCreationForm) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 	var httpResponse *utils.HTTPResponse
 	err := a.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		httpResponse, err = a.apiClient.POST(ctx, "/api/v1/address/create", req, headers)
+		httpResponse, err = a.apiClient.POST(ctx, "/logistics/api/v1/address/create", req, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call create address API: %w", err)
 		}
@@ -47,13 +47,14 @@ func (a *AddressClientAdapter) CreateAddress(ctx context.Context, req *request.C
 	return &result, nil
 }
 
-func (a *AddressClientAdapter) UpdateAddress(ctx context.Context, addressId string, req *request.UpdateAddressRequest) (*response.BaseResponse, error) {
+func (a *AddressClientAdapter) UpdateAddress(ctx context.Context, addressId string, req *request.AddressUpdateForm) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
+	path := fmt.Sprintf("/logistics/api/v1/address/update/%s", addressId)
+
 	var httpResponse *utils.HTTPResponse
 	err := a.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/address/update/%s", addressId)
-		httpResponse, err = a.apiClient.PATCH(ctx, url, req, headers)
+		httpResponse, err = a.apiClient.PATCH(ctx, path, req, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call update address API: %w", err)
 		}
@@ -75,13 +76,14 @@ func (a *AddressClientAdapter) UpdateAddress(ctx context.Context, addressId stri
 
 func (a *AddressClientAdapter) GetAddressesByEntityId(ctx context.Context, entityId string) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
+	path := fmt.Sprintf("/logistics/api/v1/address/search/by-entity/%s", entityId)
+
 	var httpResponse *utils.HTTPResponse
 	err := a.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		url := fmt.Sprintf("/api/v1/address/search/by-entity/%s", entityId)
-		httpResponse, err = a.apiClient.GET(ctx, url, headers)
+		httpResponse, err = a.apiClient.GET(ctx, path, headers)
 		if err != nil {
-			return fmt.Errorf("failed to call get addresses by entity API: %w", err)
+			return fmt.Errorf("failed to call get addresses by entity ID API: %w", err)
 		}
 		return nil
 	})
@@ -94,19 +96,18 @@ func (a *AddressClientAdapter) GetAddressesByEntityId(ctx context.Context, entit
 
 	var result response.BaseResponse
 	if err := a.apiClient.UnmarshalResponse(ctx, httpResponse, &result); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal get addresses by entity response: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal get addresses by entity ID response: %w", err)
 	}
 	return &result, nil
 }
 
-func NewAddressClientAdapter(serviceProps *properties.ExternalServiceProperties) port.IAddressClientPort {
-	baseUrl := "http://" + serviceProps.PurchaseService.Host + ":" + serviceProps.PurchaseService.Port + "/purchase-service"
-	apiClient := utils.NewBaseAPIClient(baseUrl, serviceProps.PurchaseService.Timeout)
-
-	circuitBreaker := utils.NewDefaultCircuitBreaker()
+func NewAddressClientAdapter(props *properties.ExternalServiceProperties) port.IAddressClientPort {
+	baseURL := fmt.Sprintf("http://%s:%s",
+		props.LogisticsService.Host,
+		props.LogisticsService.Port)
 
 	return &AddressClientAdapter{
-		apiClient:      apiClient,
-		circuitBreaker: circuitBreaker,
+		apiClient:      utils.NewBaseAPIClient(baseURL, props.LogisticsService.Timeout),
+		circuitBreaker: utils.NewDefaultCircuitBreaker(),
 	}
 }
