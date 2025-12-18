@@ -16,12 +16,17 @@ import {
 } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
 import { api } from './api';
+import { logisticsApi } from '@/modules/logistics/services/api';
+import { websocketMiddleware } from './middleware/websocketMiddleware';
 
 // Import feature slices
 import { authSlice, userSlice } from '@/modules/account/store';
 import { crmReducer } from '@/modules/crm/store';
 import { adminReducer } from '@/modules/admin/store';
 import { ptmReducer } from '@/modules/ptm';
+import { purchaseReducer } from '@/modules/purchase/store';
+import { logisticsReducer } from '@/modules/logistics/store';
+import { notificationReducer } from '@/modules/notifications';
 
 // Persist configuration
 const accountPersistConfig = {
@@ -39,10 +44,14 @@ const accountReducer = combineReducers({
 // Root reducer
 const rootReducer = combineReducers({
   [api.reducerPath]: api.reducer,
+  [logisticsApi.reducerPath]: logisticsApi.reducer,
   account: persistReducer(accountPersistConfig, accountReducer),
   crm: crmReducer,
   admin: adminReducer,
   ptm: ptmReducer,
+  purchase: purchaseReducer,
+  logistics: logisticsReducer,
+  notifications: notificationReducer,
 });
 
 // Configure store
@@ -55,7 +64,9 @@ export const store = configureStore({
       },
     })
       // Add RTK Query middleware
-      .concat(api.middleware),
+      .concat(api.middleware)
+      .concat(logisticsApi.middleware)
+      .concat(websocketMiddleware),
 
   // Enable Redux DevTools in development
   devTools: process.env.NODE_ENV !== 'production',
