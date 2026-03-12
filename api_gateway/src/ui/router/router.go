@@ -12,10 +12,7 @@ import (
 	account "github.com/serp/api-gateway/src/ui/controller/account"
 	"github.com/serp/api-gateway/src/ui/controller/common"
 	crm "github.com/serp/api-gateway/src/ui/controller/crm"
-	logistics "github.com/serp/api-gateway/src/ui/controller/logistics"
-	notification "github.com/serp/api-gateway/src/ui/controller/notification"
 	ptm "github.com/serp/api-gateway/src/ui/controller/ptm"
-	purchase "github.com/serp/api-gateway/src/ui/controller/purchase"
 	"github.com/serp/api-gateway/src/ui/middleware"
 	"go.uber.org/fx"
 )
@@ -26,8 +23,8 @@ type RegisterRoutersIn struct {
 	Engine   *gin.Engine
 	Actuator *actuator.Endpoint
 
-	NotificationProxyController *notification.NotificationProxyController
-	GenericProxyController      *common.GenericProxyController
+	WebSocketProxyController *common.WebSocketProxyController
+	GenericProxyController   *common.GenericProxyController
 
 	AuthController             *account.AuthController
 	UserController             *account.UserController
@@ -47,37 +44,24 @@ type RegisterRoutersIn struct {
 	CustomerController    *crm.CustomerController
 	ContactController     *crm.ContactController
 
-	ProjectController   *ptm.ProjectController
-	GroupTaskController *ptm.GroupTaskController
-	TaskController      *ptm.TaskController
-	CommentController   *ptm.CommentController
-	NoteController      *ptm.NoteController
-	UserTagController   *ptm.UserTagController
+	ProjectController *ptm.ProjectController
+	TaskController    *ptm.TaskController
+	NoteController    *ptm.NoteController
 
-	ProductController  *purchase.ProductController
-	AddressController  *purchase.AddressController
-	CategoryController *purchase.CategoryController
-	FacilityController *purchase.FacilityController
-	SupplierController *purchase.SupplierController
-	OrderController    *purchase.OrderController
-	ShipmentController *purchase.ShipmentController
+	SchedulePlanController         *ptm.SchedulePlanController
+	AvailabilityCalendarController *ptm.AvailabilityCalendarController
+	ScheduleWindowController       *ptm.ScheduleWindowController
+	ScheduleEventController        *ptm.ScheduleEventController
+	ScheduleTaskController         *ptm.ScheduleTaskController
 
-	LogisticsAddressController       *logistics.AddressController
-	LogisticsCategoryController      *logistics.CategoryController
-	LogisticsCustomerController      *logistics.CustomerController
-	LogisticsFacilityController      *logistics.FacilityController
-	LogisticsInventoryItemController *logistics.InventoryItemController
-	LogisticsOrderController         *logistics.OrderController
-	LogisticsProductController       *logistics.ProductController
-	LogisticsSupplierController      *logistics.SupplierController
-	LogisticsShipmentController      *logistics.ShipmentController
-
-	JWTMiddleware  *middleware.JWTMiddleware
-	CorsMiddleware *middleware.CorsMiddleware
+	JWTMiddleware       *middleware.JWTMiddleware
+	CorsMiddleware      *middleware.CorsMiddleware
+	RateLimitMiddleware *middleware.RateLimitMiddleware
 }
 
 func RegisterGinRouters(p RegisterRoutersIn) {
 	p.Engine.Use(p.CorsMiddleware.Handler())
+	p.Engine.Use(p.RateLimitMiddleware.IPRateLimit())
 
 	group := p.Engine.Group(p.App.Path())
 
@@ -88,7 +72,6 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 		group,
 		p.AuthController,
 		p.UserController,
-		p.KeycloakController,
 		p.RoleController,
 		p.PermissionController,
 		p.ModuleController,
@@ -107,46 +90,56 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 		p.CustomerController,
 		p.ContactController,
 		p.GenericProxyController,
+		p.JWTMiddleware,
+		p.RateLimitMiddleware,
 	)
 
 	RegisterPtmRoutes(
 		group,
 		p.ProjectController,
-		p.GroupTaskController,
 		p.TaskController,
-		p.CommentController,
 		p.NoteController,
-		p.UserTagController,
+		p.SchedulePlanController,
+		p.AvailabilityCalendarController,
+		p.ScheduleWindowController,
+		p.ScheduleEventController,
+		p.ScheduleTaskController,
 	)
 
 	RegisterPurchaseRoutes(
 		group,
-		p.ProductController,
-		p.AddressController,
-		p.CategoryController,
-		p.FacilityController,
-		p.SupplierController,
-		p.OrderController,
-		p.ShipmentController,
+		p.GenericProxyController,
+		p.JWTMiddleware,
+		p.RateLimitMiddleware,
 	)
 
 	RegisterLogisticsRoutes(
 		group,
-		p.LogisticsAddressController,
-		p.LogisticsCategoryController,
-		p.LogisticsCustomerController,
-		p.LogisticsFacilityController,
-		p.LogisticsInventoryItemController,
-		p.LogisticsOrderController,
-		p.LogisticsProductController,
-		p.LogisticsSupplierController,
-		p.LogisticsShipmentController,
+		p.GenericProxyController,
+		p.JWTMiddleware,
+		p.RateLimitMiddleware,
 	)
 
 	RegisterNotificationRoutes(
 		group,
-		p.NotificationProxyController,
+		p.WebSocketProxyController,
 		p.GenericProxyController,
 		p.JWTMiddleware,
+		p.RateLimitMiddleware,
+	)
+
+	RegisterDiscussRoutes(
+		group,
+		p.WebSocketProxyController,
+		p.GenericProxyController,
+		p.JWTMiddleware,
+		p.RateLimitMiddleware,
+	)
+
+	RegisterSalesRoutes(
+		group,
+		p.GenericProxyController,
+		p.JWTMiddleware,
+		p.RateLimitMiddleware,
 	)
 }
