@@ -25,7 +25,11 @@ const rawBaseQuery = fetchBaseQuery({
     if (token) {
       headers.set('authorization', `Bearer ${token}`);
     }
-    headers.set('content-type', 'application/json');
+
+    // Don't manually set content-type here
+    // fetchBaseQuery will automatically set the correct content-type:
+    // - 'application/json' for plain object bodies
+    // - 'multipart/form-data' (with boundary) for FormData bodies
 
     return headers;
   },
@@ -164,19 +168,20 @@ export const api = createApi({
     'ptm/Task',
     'ptm/Project',
     'ptm/Schedule',
+    'ptm/ScheduleTask',
     'ptm/FocusTime',
     'ptm/Availability',
     'ptm/Activity',
     'ptm/Note',
     'ptm/Dependency',
     // Purchase tags
-    'purchase/Supplier',
-    'purchase/Product',
-    'purchase/Category',
-    'purchase/Order',
-    'purchase/Facility',
-    'purchase/Shipment',
-    'purchase/Address',
+    'PurchaseSupplier',
+    'PurchaseProduct',
+    'PurchaseCategory',
+    'PurchaseOrder',
+    'PurchaseFacility',
+    'PurchaseShipment',
+    'PurchaseAddress',
     // Logistics tags
     'logistics/Address',
     'logistics/Category',
@@ -187,8 +192,21 @@ export const api = createApi({
     'logistics/Product',
     'logistics/Shipment',
     'logistics/Supplier',
+    // Sales tags
+    'SalesCustomer',
+    'Address',
+    'Category',
+    'Facility',
+    'InventoryItem',
+    'Product',
+    'Order',
     // Notification tags
     'Notification',
+    // Discuss tags
+    'Channel',
+    'Message',
+    'DiscussActivity',
+    'Presence',
   ],
 
   // Define endpoints in separate files for each module
