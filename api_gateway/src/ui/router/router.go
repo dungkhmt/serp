@@ -10,6 +10,10 @@ import (
 	"github.com/golibs-starter/golib"
 	"github.com/golibs-starter/golib/web/actuator"
 	account "github.com/serp/api-gateway/src/ui/controller/account"
+	"github.com/serp/api-gateway/src/ui/controller/common"
+	crm "github.com/serp/api-gateway/src/ui/controller/crm"
+	logistics "github.com/serp/api-gateway/src/ui/controller/logistics"
+	notification "github.com/serp/api-gateway/src/ui/controller/notification"
 	ptm "github.com/serp/api-gateway/src/ui/controller/ptm"
 	purchase "github.com/serp/api-gateway/src/ui/controller/purchase"
 	"github.com/serp/api-gateway/src/ui/middleware"
@@ -21,6 +25,9 @@ type RegisterRoutersIn struct {
 	App      *golib.App
 	Engine   *gin.Engine
 	Actuator *actuator.Endpoint
+
+	NotificationProxyController *notification.NotificationProxyController
+	GenericProxyController      *common.GenericProxyController
 
 	AuthController             *account.AuthController
 	UserController             *account.UserController
@@ -34,6 +41,11 @@ type RegisterRoutersIn struct {
 	MenuDisplayController      *account.MenuDisplayController
 	OrganizationController     *account.OrganizationController
 	DepartmentController       *account.DepartmentController
+
+	LeadController        *crm.LeadController
+	OpportunityController *crm.OpportunityController
+	CustomerController    *crm.CustomerController
+	ContactController     *crm.ContactController
 
 	ProjectController   *ptm.ProjectController
 	GroupTaskController *ptm.GroupTaskController
@@ -49,6 +61,16 @@ type RegisterRoutersIn struct {
 	SupplierController *purchase.SupplierController
 	OrderController    *purchase.OrderController
 	ShipmentController *purchase.ShipmentController
+
+	LogisticsAddressController       *logistics.AddressController
+	LogisticsCategoryController      *logistics.CategoryController
+	LogisticsCustomerController      *logistics.CustomerController
+	LogisticsFacilityController      *logistics.FacilityController
+	LogisticsInventoryItemController *logistics.InventoryItemController
+	LogisticsOrderController         *logistics.OrderController
+	LogisticsProductController       *logistics.ProductController
+	LogisticsSupplierController      *logistics.SupplierController
+	LogisticsShipmentController      *logistics.ShipmentController
 
 	JWTMiddleware  *middleware.JWTMiddleware
 	CorsMiddleware *middleware.CorsMiddleware
@@ -78,6 +100,15 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 		p.OrganizationController,
 	)
 
+	RegisterCrmRoutes(
+		group,
+		p.LeadController,
+		p.OpportunityController,
+		p.CustomerController,
+		p.ContactController,
+		p.GenericProxyController,
+	)
+
 	RegisterPtmRoutes(
 		group,
 		p.ProjectController,
@@ -97,5 +128,25 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 		p.SupplierController,
 		p.OrderController,
 		p.ShipmentController,
+	)
+
+	RegisterLogisticsRoutes(
+		group,
+		p.LogisticsAddressController,
+		p.LogisticsCategoryController,
+		p.LogisticsCustomerController,
+		p.LogisticsFacilityController,
+		p.LogisticsInventoryItemController,
+		p.LogisticsOrderController,
+		p.LogisticsProductController,
+		p.LogisticsSupplierController,
+		p.LogisticsShipmentController,
+	)
+
+	RegisterNotificationRoutes(
+		group,
+		p.NotificationProxyController,
+		p.GenericProxyController,
+		p.JWTMiddleware,
 	)
 }
