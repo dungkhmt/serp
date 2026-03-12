@@ -30,10 +30,8 @@ export const websocketMiddleware: Middleware =
         return;
       }
 
-      const wsUrl =
-        process.env.NEXT_PUBLIC_WS_URL ||
-        'ws://localhost:8080/ws/notifications';
-      const url = `${wsUrl}?token=${token}`;
+      const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080/ws';
+      const url = `${wsUrl}/notifications?token=${token}`;
 
       try {
         socket = new WebSocket(url);
@@ -89,7 +87,7 @@ export const websocketMiddleware: Middleware =
 
         socket.onerror = (error) => {
           store.dispatch(wsError('WebSocket error'));
-          console.error('WebSocket error', error);
+          // console.error('WebSocket error', error);
         };
       } catch (e) {
         console.error('Failed to create WebSocket', e);
