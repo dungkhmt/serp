@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
+import serp.project.account.core.domain.dto.message.CreateNotificationEvent;
 import serp.project.account.core.domain.dto.request.AssignUserToDepartmentRequest;
 import serp.project.account.core.domain.dto.request.AssignUserToModuleRequest;
 import serp.project.account.core.domain.dto.request.CreateDepartmentRequest;
@@ -22,8 +23,12 @@ import serp.project.account.core.domain.dto.response.DepartmentResponse;
 import serp.project.account.core.domain.dto.response.UserDepartmentResponse;
 import serp.project.account.core.domain.entity.DepartmentEntity;
 import serp.project.account.core.domain.entity.OrganizationEntity;
+import serp.project.account.core.domain.entity.UserDepartmentEntity;
+import serp.project.account.core.domain.entity.UserEntity;
+import serp.project.account.core.domain.entity.UserModuleAccessEntity;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.service.IDepartmentService;
+import serp.project.account.core.service.INotificationService;
 import serp.project.account.core.service.IOrganizationService;
 import serp.project.account.core.service.IUserDepartmentService;
 import serp.project.account.core.service.IUserModuleAccessService;
@@ -42,6 +47,8 @@ public class DepartmentUseCase {
     private final IUserModuleAccessService userModuleAccessService;
     private final IOrganizationService organizationService;
 
+    private final INotificationService notificationService;
+
     private final ModuleAccessUseCase moduleAccessUseCase;
 
     private final ResponseUtils responseUtils;
@@ -59,7 +66,7 @@ public class DepartmentUseCase {
                 var assignRequest = AssignUserToDepartmentRequest.builder()
                         .userId(department.getManagerId())
                         .departmentId(department.getId())
-                        .jobTitle("Manager")
+                        .jobTitle(Constants.Department.MANAGER_JOB_TITLE)
                         .build();
                 userDepartmentService.assignUserToDepartment(assignRequest);
             }
@@ -75,9 +82,9 @@ public class DepartmentUseCase {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public GeneralResponse<?> updateDepartment(Long departmentId, UpdateDepartmentRequest request) {
+    public GeneralResponse<?> updateDepartment(Long organizationId, Long departmentId, UpdateDepartmentRequest request) {
         try {
-            var department = departmentService.getDepartmentById(departmentId);
+            var department = getDepartmentInOrganization(organizationId, departmentId);
             if (!CollectionUtils.isEmpty(request.getDefaultModuleIds())) {
                 validateModuleAccessForOrganization(department.getOrganizationId(), request.getDefaultModuleIds());
             }
@@ -93,9 +100,9 @@ public class DepartmentUseCase {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public GeneralResponse<?> getDepartmentById(Long departmentId) {
+    public GeneralResponse<?> getDepartmentById(Long organizationId, Long departmentId) {
         try {
-            var department = departmentService.getDepartmentById(departmentId);
+            var department = getDepartmentInOrganization(organizationId, departmentId);
             var manager = department.getManagerId() != null
                     ? userService.getUserById(department.getManagerId())
                     : null;
@@ -120,8 +127,9 @@ public class DepartmentUseCase {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public GeneralResponse<?> deleteDepartment(Long departmentId) {
+    public GeneralResponse<?> deleteDepartment(Long organizationId, Long departmentId) {
         try {
+            getDepartmentInOrganization(organizationId, departmentId);
             departmentService.deleteDepartment(departmentId);
             return responseUtils.success("Department deleted successfully");
         } catch (AppException e) {
@@ -157,7 +165,9 @@ public class DepartmentUseCase {
                     .filter(Objects::nonNull)
                     .distinct().toList();
             var idToUser = userService.getUsersByIds(userIds).stream()
-                    .collect(Collectors.toMap(u -> u.getId(), Function.identity()));
+                    .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
+            var memberCountByDepartmentId = userDepartmentService.countMembersByDepartmentIds(
+                    departments.stream().map(DepartmentEntity::getId).toList());
 
             var departmentResponses = departments.stream()
                     .map(d -> {
@@ -170,7 +180,7 @@ public class DepartmentUseCase {
                                 parentDepartment != null ? parentDepartment.getName() : null,
                                 manager != null ? manager.getFullName() : null,
                                 0, // implement later
-                                userDepartmentService.countMembersByDepartmentId(d.getId()).intValue());
+                                memberCountByDepartmentId.getOrDefault(d.getId(), 0L).intValue());
                     })
                     .toList();
             return responseUtils.success(
@@ -184,9 +194,9 @@ public class DepartmentUseCase {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public GeneralResponse<?> assignUserToDepartment(AssignUserToDepartmentRequest request) {
+    public GeneralResponse<?> assignUserToDepartment(Long organizationId, AssignUserToDepartmentRequest request) {
         try {
-            var department = departmentService.getDepartmentById(request.getDepartmentId());
+            var department = getDepartmentInOrganization(organizationId, request.getDepartmentId());
             if (!department.isActiveDepartment()) {
                 log.error("Cannot assign user to inactive department {}", request.getDepartmentId());
                 throw new AppException(Constants.ErrorMessage.DEPARTMENT_INACTIVE);
@@ -209,18 +219,23 @@ public class DepartmentUseCase {
             List<Long> moduleIdsToAssign = getDefaultModuleIdsForDepartment(department, organization);
             if (!moduleIdsToAssign.isEmpty()) {
                 for (long moduleId : moduleIdsToAssign) {
-                    try {
-                        var assignModuleRequest = AssignUserToModuleRequest.builder()
-                                .userId(user.getId())
-                                .moduleId(moduleId)
-                                .build();
-                        moduleAccessUseCase.assignUserToModule(organization.getId(), assignModuleRequest,
-                                organization.getOwnerId());
-                    } catch (Exception e) {
-                        log.error("Error assigning module {} to user {}: {}", moduleId, user.getId(), e.getMessage());
-                    }
+                    var assignModuleRequest = AssignUserToModuleRequest.builder()
+                            .userId(user.getId())
+                            .moduleId(moduleId)
+                            .build();
+                    moduleAccessUseCase.assignUserToModule(organization.getId(), assignModuleRequest,
+                            organization.getOwnerId());
                 }
             }
+
+            var notificationEvent = CreateNotificationEvent.builder()
+                    .userId(user.getId())
+                    .tenantId(organization.getId())
+                    .title("Assigned to Department")
+                    .message("You have been assigned to the department: " + department.getName())
+                    .actionUrl("/departments/" + department.getId())
+                    .build();
+            notificationService.sendNotification(notificationEvent);
 
             return responseUtils.success("User assigned to department successfully");
         } catch (AppException e) {
@@ -232,15 +247,16 @@ public class DepartmentUseCase {
         }
     }
 
-    public GeneralResponse<?> getMembersByDepartmentId(Long departmentId) {
+    public GeneralResponse<?> getMembersByDepartmentId(Long organizationId, Long departmentId) {
         try {
+            getDepartmentInOrganization(organizationId, departmentId);
             var members = userDepartmentService.getDepartmentMembers(departmentId);
-            var userIds = members.stream().map(ud -> ud.getUserId()).distinct().toList();
+            var userIds = members.stream().map(UserDepartmentEntity::getUserId).distinct().toList();
             if (userIds.isEmpty()) {
                 return responseUtils.success(new ArrayList<UserDepartmentResponse>());
             }
             var idToUser = userService.getUsersByIds(userIds).stream()
-                    .collect(Collectors.toMap(u -> u.getId(), Function.identity()));
+                    .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
             var memberResponses = members.stream()
                     .map(ud -> new UserDepartmentResponse(
                             ud,
@@ -276,8 +292,8 @@ public class DepartmentUseCase {
         long ownerId = organization.getOwnerId();
 
         var availableModuleIds = userModuleAccessService.getUserModuleAccesses(ownerId, organizationId).stream()
-                .filter(uma -> uma.getIsActive())
-                .map(uma -> uma.getModuleId())
+                .filter(UserModuleAccessEntity::getIsActive)
+                .map(UserModuleAccessEntity::getModuleId)
                 .toList();
         for (Long moduleId : moduleIds) {
             if (!availableModuleIds.contains(moduleId)) {
@@ -294,12 +310,20 @@ public class DepartmentUseCase {
         }
         var nowAvailableModuleIds = userModuleAccessService.getUserModuleAccesses(
                 organization.getOwnerId(), organization.getId()).stream()
-                .filter(uma -> uma.getIsActive())
-                .map(uma -> uma.getModuleId())
+                .filter(UserModuleAccessEntity::getIsActive)
+                .map(UserModuleAccessEntity::getModuleId)
                 .toList();
-        List<Long> validModuleIds = department.getDefaultModuleIds().stream()
+        return department.getDefaultModuleIds().stream()
                 .filter(nowAvailableModuleIds::contains)
                 .toList();
-        return validModuleIds;
+    }
+
+    private DepartmentEntity getDepartmentInOrganization(Long organizationId, Long departmentId) {
+        var department = departmentService.getDepartmentById(departmentId);
+        if (!department.getOrganizationId().equals(organizationId)) {
+            log.error("Department {} does not belong to organization {}", departmentId, organizationId);
+            throw new AppException(Constants.ErrorMessage.NO_PERMISSION_TO_ACCESS_ORGANIZATION);
+        }
+        return department;
     }
 }
